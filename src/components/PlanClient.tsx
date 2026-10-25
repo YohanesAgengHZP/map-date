@@ -27,6 +27,7 @@ import { lookupPlaces } from "@/lib/places";
 import { buildDirectionsUrl, estimateRoute, getRoute } from "@/lib/routing";
 import { useFavorites } from "@/lib/useFavorites";
 import { useLocalStore } from "@/lib/useLocalStore";
+import { visitDurationsStore, withVisitDurations } from "@/lib/visitDurations";
 import type { Destination, Plan, RouteResult } from "@/lib/types";
 import { AddStopDialog } from "./AddStopDialog";
 import { DestinationDetailModal } from "./DestinationDetailModal";
@@ -80,15 +81,20 @@ export function PlanClient({
   const [mobileView, setMobileView] = useState<"itinerary" | "map">("itinerary");
   const { isFavorite, toggle } = useFavorites();
   const customPlaces = useLocalStore(customPlacesStore);
+  const durations = useLocalStore(visitDurationsStore);
 
   // `customPlaces` is in the deps because `getDestinations` reads the live-place
   // cache internally, which the lint rule cannot see. Dropping it, as the rule
   // suggests, leaves this memo stale when a shared plan's stops arrive from
   // Overpass a moment after first paint.
+  //
+  // Durations are applied here rather than inside `getDestination` so the
+  // server-rendered Discover cards cannot disagree with the client about how
+  // long a plan takes. Editing one is a thing you do on this page.
   const destinations = useMemo(
-    () => getDestinations(stopIds),
+    () => withVisitDurations(getDestinations(stopIds), durations),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stopIds, customPlaces],
+    [stopIds, customPlaces, durations],
   );
 
   /**

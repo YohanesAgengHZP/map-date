@@ -12,6 +12,12 @@ import {
   X,
 } from "lucide-react";
 import { formatDuration } from "@/lib/format";
+import { useLocalStore } from "@/lib/useLocalStore";
+import {
+  DURATION_PRESETS,
+  setVisitDuration,
+  visitDurationsStore,
+} from "@/lib/visitDurations";
 import type { Destination } from "@/lib/types";
 import { CategoryIcon } from "./CategoryIcon";
 import { Button, Chip, Stat, cx } from "./ui";
@@ -154,7 +160,7 @@ export function DestinationDetailModal({
                   )}
                 </Stat>
                 <Stat icon={<Timer size={15} />} label="How long to stay">
-                  {formatDuration(destination.visitDurationMinutes)}
+                  <VisitDurationPicker destination={destination} />
                 </Stat>
                 <Stat icon={<MapPin size={15} />} label="Address">
                   {/* A place found through search has only the address tags
@@ -209,5 +215,61 @@ export function DestinationDetailModal({
         </div>
       ) : null}
     </dialog>
+  );
+}
+
+/**
+ * The only editable field in here, because it is the only one the app made up.
+ * Everything else came from a source; this came from a lookup table keyed on
+ * category, and it is what every arrival time in the plan is built on.
+ *
+ * A native `<select>` rather than a number input: the useful answers are a
+ * short list, it needs no validation, and it is keyboard and screen-reader
+ * sane with no library.
+ */
+function VisitDurationPicker({ destination }: { destination: Destination }) {
+  const overrides = useLocalStore(visitDurationsStore);
+  const published = destination.visitDurationMinutes;
+  const current = overrides[destination.id] ?? published;
+  const edited = current !== published;
+
+  // The published figure is always offered, even when it is not a preset:
+  // several built-in venues sit at 75 minutes, and dropping back to the
+  // original has to stay reachable.
+  const options = [...new Set([...DURATION_PRESETS, published, current])].sort(
+    (a, b) => a - b,
+  );
+
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <label className="sr-only" htmlFor="visit-duration">
+        How long to stay at {destination.name}
+      </label>
+      <select
+        id="visit-duration"
+        value={current}
+        onChange={(event) => {
+          const minutes = Number(event.target.value);
+          setVisitDuration(destination.id, minutes === published ? null : minutes);
+        }}
+        className="border-line focus-visible:outline-clay cursor-pointer rounded-lg border bg-transparent px-2 py-1 text-sm"
+      >
+        {options.map((minutes) => (
+          <option key={minutes} value={minutes}>
+            {formatDuration(minutes)}
+          </option>
+        ))}
+      </select>
+
+      {edited ? (
+        <button
+          type="button"
+          onClick={() => setVisitDuration(destination.id, null)}
+          className="text-ink-muted hover:text-clay text-xs underline underline-offset-2"
+        >
+          Reset to {formatDuration(published)}
+        </button>
+      ) : null}
+    </span>
   );
 }

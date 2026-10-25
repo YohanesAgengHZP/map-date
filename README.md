@@ -82,7 +82,8 @@ that cache. Every other call site was untouched by the feature.
 
 Two fields no provider publishes are filled locally and marked as guesses:
 `visitDurationMinutes` comes from a per-category table, and `description` says
-only what the tags already say. Results are filtered before display — a city, a
+only what the tags already say. The duration is editable — see below, because
+every arrival time in a plan is built on it. Results are filtered before display — a city, a
 street, and street furniture like the four park benches named "Bangku Taman"
 are not places you spend an hour.
 
@@ -142,6 +143,31 @@ Verification status per field:
   supplied, so the name is a placeholder and the pin is an approximate point in
   the Tirtodipuran batik quarter. Confirm the operator before showing this to
   anyone.
+
+## How long you stay somewhere
+
+`visitDurationMinutes` is the number the whole itinerary hangs off, and it is
+the weakest field in the record: no source publishes it. For the twenty
+built-ins it is a considered figure; for a searched place it is a lookup on the
+category, which is how Prambanan Temple arrives as one hour.
+
+So it has a knob on it. **How long to stay** in the detail panel is a native
+`<select>`, and changing it reschedules every stop after it, the totals and the
+duration band. Overrides live in `localStorage` under `jalanjalan:durations`,
+keyed by place id, kept apart from the places themselves so they survive
+clearing the place cache and apply to built-in and searched venues alike.
+Choosing the published figure deletes the key rather than storing a value equal
+to the default, so "has anyone had an opinion here" stays answerable.
+
+They are applied in `PlanClient` rather than inside `getDestination`: the
+Discover grid renders on the server, where `localStorage` does not exist, and a
+card claiming a different length to the page it opens would be a hydration
+mismatch. Editing a duration is something you do on the plan page.
+
+A shared link carries the sender's duration for the places it carries, so a
+plan that says five hours still says five hours when it arrives. An override on
+a *built-in* venue does not travel, because built-ins are resolved from the
+reader's own repo copy.
 
 ## Plans you make
 
@@ -296,8 +322,10 @@ layer and focus containment without a focus-trap dependency.
 - Searched places carry no photo, no written description and often no address:
   only what OpenStreetMap tags happen to hold. The detail panel says "Not
   listed anywhere" rather than leaving a field blank.
-- `visitDurationMinutes` for a searched place is a per-category guess
-  (`VISIT_MINUTES` in `places.ts`). Prambanan Temple comes back as one hour.
+- `visitDurationMinutes` for a searched place starts as a per-category guess
+  (`VISIT_MINUTES` in `places.ts`), so Prambanan Temple arrives as one hour
+  until someone corrects it. Overrides are per browser and per place, not per
+  plan: the same venue in two plans gets the same figure.
 - Search ranking is biased toward Jogja by a hardcoded `SEARCH_CENTER`, even
   though the dialog will happily find somewhere in another country.
 - Neither Photon nor Overpass is retried or backed off, and repeated searches

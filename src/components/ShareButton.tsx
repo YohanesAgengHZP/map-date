@@ -5,6 +5,7 @@ import { Check, Share2 } from "lucide-react";
 import { getDestinations } from "@/data/destinations";
 import { encodePlan } from "@/lib/myPlans";
 import { isPlaceId } from "@/lib/places";
+import { visitDurationsStore, withVisitDurations } from "@/lib/visitDurations";
 import type { Mood } from "@/lib/types";
 import { Button } from "./ui";
 
@@ -35,9 +36,12 @@ export function ShareButton({
   const share = async () => {
     // Searched places have no entry in the repo for the reader to resolve
     // against, so their records ride along inside the link.
-    const places = getDestinations(destinationIds).filter((place) =>
-      isPlaceId(place.id),
-    );
+    // With the sender's own duration, not the published guess: a plan that
+    // says four hours should still say four hours when it arrives.
+    const places = withVisitDurations(
+      getDestinations(destinationIds),
+      visitDurationsStore.read(),
+    ).filter((place) => isPlaceId(place.id));
     const token = encodePlan({ title, mood, startTime, destinationIds, places });
     const url = `${window.location.origin}/mine?plan=${token}`;
 
