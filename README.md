@@ -174,10 +174,23 @@ cannot know these ids: `/plan/[id]` is statically generated with
 ## Sharing a plan
 
 **Share** on any plan page sends the whole plan inside the link, as
-`/mine?plan=<token>`: base64url of `{title, mood, startTime, destinationIds}`.
-No backend, no accounts, no link that expires, and nothing of yours is uploaded
-anywhere. It shares the stops **currently on screen**, so a built-in plan you
-just tweaked can be passed on without saving it first.
+`/mine?plan=<token>`: base64url of `{t, m, s, d, p}` — title, mood, start time,
+stop ids, and records for the stops the reader cannot look up. No backend, no
+accounts, no link that expires, and nothing of yours is uploaded anywhere. It
+shares the stops **currently on screen**, so a built-in plan you just tweaked
+can be passed on without saving it first.
+
+That `p` payload is the difference between a link that opens and one that
+hangs. A built-in id resolves from the repo, but a searched one resolves only
+through Overpass, which answers in 10 to 20 seconds under load and was
+returning `502` while this was being tested. Carrying name, category,
+coordinates, duration and hours costs about 110 bytes per stop — a four-stop
+plan with one searched place is a 359-character URL — and the plan then renders
+immediately, offline, with no lookup at all.
+
+Links shared before `p` existed carry only ids and still work: they fall back
+to the Overpass lookup, and a stop that cannot be resolved is named in a notice
+rather than silently dropped.
 
 The button tries the native share sheet (the realistic case is one person
 sending to one person from a phone), falls back to the clipboard, and finally to
@@ -185,13 +198,23 @@ a prompt holding the raw URL. A share button that silently does nothing is
 worse than an ugly one.
 
 Whoever opens the link sees the plan with a `Shared with you` chip and a **Save
-to my plans** button. Nothing is written to their browser until they press it.
+to my plans** button. The plan is not saved until they press it. The place
+records it carries are written to the `jalanjalan:places` cache on arrival,
+which is what lets the stops render at all; caching a place is not saving a
+plan.
 
 `decodePlan` treats the token as untrusted input, because it is: wrong shape,
 unknown mood, malformed time or a non-string id all return null and the page
-says the link did not work, rather than rendering half a plan. The stop list is
-capped at 25. `myPlans.test.ts` covers the round trip, non-ASCII titles, URL
-safety and each rejection.
+says the link did not work, rather than rendering half a plan. Both the stop
+list and the carried records are capped at 25.
+
+Carried records get the same treatment in `fromSharedPlace`, and the two fields
+that could do harm are never read from the token at all: `directionsUrl` is
+rebuilt from the validated coordinates, so a crafted link cannot aim **Open in
+Maps** at a site of its choosing, and `description` is derived from the
+category rather than carried as free text. A malformed record is dropped on its
+own instead of failing the whole link. `myPlans.test.ts` covers the round trip,
+non-ASCII titles, URL safety, backwards compatibility and each rejection.
 
 ## Structure
 
@@ -280,8 +303,9 @@ layer and focus containment without a focus-trap dependency.
 - Neither Photon nor Overpass is retried or backed off, and repeated searches
   are not cached. Both public endpoints are rate-limited with no uptime
   guarantee; point the env vars at your own instances for anything real.
-- Overpass answers in 10–20 seconds under load, which is what a shared link
-  waits on when it names a place the reader has never seen.
+- Overpass answers in 10–20 seconds under load, and returns `502` often enough
+  to have done so during testing. Links now carry their own place records, so
+  only ones shared before that change still wait on it.
 - Six venues sit in the pool without being in a plan, reachable by editing an
   itinerary: L'Union, Ryuji, the batik workshop, Jogja Art Activity, Kids Fun
   Parcs and Ibarbo Park.

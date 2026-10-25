@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { Check, Share2 } from "lucide-react";
+import { getDestinations } from "@/data/destinations";
 import { encodePlan } from "@/lib/myPlans";
+import { isPlaceId } from "@/lib/places";
 import type { Mood } from "@/lib/types";
 import { Button } from "./ui";
 
@@ -13,6 +15,9 @@ import { Button } from "./ui";
  * plan to one person from a phone. Falls back to the clipboard, and finally to
  * a prompt holding the URL, which is ugly but always works: a share button
  * that silently does nothing is worse.
+ *
+ * Resolves the stops itself rather than taking them as a prop: the records are
+ * one synchronous lookup away, and every caller already passes the ids.
  */
 export function ShareButton({
   title,
@@ -28,7 +33,12 @@ export function ShareButton({
   const [done, setDone] = useState(false);
 
   const share = async () => {
-    const token = encodePlan({ title, mood, startTime, destinationIds });
+    // Searched places have no entry in the repo for the reader to resolve
+    // against, so their records ride along inside the link.
+    const places = getDestinations(destinationIds).filter((place) =>
+      isPlaceId(place.id),
+    );
+    const token = encodePlan({ title, mood, startTime, destinationIds, places });
     const url = `${window.location.origin}/mine?plan=${token}`;
 
     if (navigator.share) {

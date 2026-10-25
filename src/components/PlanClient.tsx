@@ -50,6 +50,7 @@ export function PlanClient({
   plan,
   onStopsChange,
   owned = false,
+  seedPlaces,
   headerAction,
 }: {
   plan: Plan;
@@ -61,6 +62,12 @@ export function PlanClient({
    * scratch copy of what ships in `plans.ts` rather than something saved.
    */
   owned?: boolean;
+  /**
+   * Records for stops that cannot be resolved from the repo, handed over by
+   * whoever built the plan. A shared link carries these so its stops render
+   * without a lookup.
+   */
+  seedPlaces?: Destination[];
   /** Slot in the hero for "Save as my plan" or "Delete this plan". */
   headerAction?: ReactNode;
 }) {
@@ -83,6 +90,17 @@ export function PlanClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [stopIds, customPlaces],
   );
+
+  /**
+   * Seed first, and from inside this component rather than its parent.
+   * Effects run child-before-parent across the tree but in declaration order
+   * within one component, so seeding here is the only placement that is
+   * guaranteed to happen before the lookup below decides what is missing.
+   * Seeding from the parent fired a real Overpass request every time.
+   */
+  useEffect(() => {
+    for (const place of seedPlaces ?? []) addCustomPlace(place);
+  }, [seedPlaces]);
 
   /**
    * Stops this browser has never seen, which is what a shared link looks like

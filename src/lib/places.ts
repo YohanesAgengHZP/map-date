@@ -286,6 +286,90 @@ export async function searchPlaces(
 }
 
 /* ------------------------------------------------------------------ *
+ * Share links
+ *
+ * A shared plan names its stops by id. Built-in ids resolve from the repo, but
+ * a searched one resolves only through Overpass, which answers in 10 to 20
+ * seconds under load and sometimes not at all. Carrying the few fields needed
+ * to draw the stop means the plan renders immediately and offline, and the
+ * Overpass lookup becomes enrichment rather than a dependency.
+ * ------------------------------------------------------------------ */
+
+/**
+ * The smallest record that still renders a place. Single-letter keys and
+ * five-decimal coordinates (about a metre) because this ends up in a URL
+ * someone pastes into a chat: roughly 110 bytes per stop rather than 400.
+ */
+export type SharedPlace = {
+  i: string;
+  n: string;
+  c: string;
+  y: number;
+  x: number;
+  v: number;
+  h?: string;
+};
+
+export function toSharedPlace(place: Destination): SharedPlace {
+  return {
+    i: place.id,
+    n: place.name,
+    c: place.category,
+    y: Number(place.latitude.toFixed(5)),
+    x: Number(place.longitude.toFixed(5)),
+    v: place.visitDurationMinutes,
+    ...(place.openingHours ? { h: place.openingHours } : {}),
+  };
+}
+
+/** A minute budget past this is not a stop on an afternoon out. */
+const MAX_VISIT_MINUTES = 24 * 60;
+
+/**
+ * Rebuild a place from a share link, which is hostile input by definition.
+ *
+ * Every field is range-checked, and the two fields that could do harm are
+ * never read from the token at all: `directionsUrl` is derived from the
+ * validated coordinates, so a crafted link cannot point "Open in Maps" at a
+ * site of its choosing, and `description` is derived from the category rather
+ * than carried as free text.
+ */
+export function fromSharedPlace(raw: unknown): Destination | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const { i, n, c, y, x, v, h } = raw as Record<string, unknown>;
+
+  if (typeof i !== "string" || !isPlaceId(i)) return null;
+
+  const name = typeof n === "string" ? n.trim() : "";
+  if (name.length === 0 || name.length > 120) return null;
+
+  const category = typeof c === "string" ? c.trim() : "";
+  if (category.length === 0 || category.length > 60) return null;
+
+  if (!isUsableCoord(y, x)) return null;
+
+  if (typeof v !== "number" || !Number.isFinite(v)) return null;
+  const minutes = Math.round(v);
+  if (minutes <= 0 || minutes > MAX_VISIT_MINUTES) return null;
+
+  const hours = typeof h === "string" ? h.trim().slice(0, 80) : undefined;
+
+  return {
+    id: i,
+    name,
+    category,
+    description: describe(category, undefined),
+    latitude: y as number,
+    longitude: x as number,
+    address: "",
+    visitDurationMinutes: minutes,
+    ...(hours ? { openingHours: hours } : {}),
+    tags: [],
+    directionsUrl: directionsUrl(y as number, x as number),
+  };
+}
+
+/* ------------------------------------------------------------------ *
  * Overpass: resolve by id
  * ------------------------------------------------------------------ */
 
