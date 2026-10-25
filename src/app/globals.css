@@ -1,0 +1,110 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+@theme {
+  --color-cream: #faf6f1;
+  --color-paper: #fffdfa;
+  --color-line: #ebe0d4;
+  --color-line-strong: #ddcdbd;
+
+  --color-ink: #2e2622;
+  --color-ink-soft: #5c504a;
+  --color-ink-muted: #8a7a70;
+
+  --color-clay: #8c3b3b;
+  --color-clay-dark: #72302f;
+  --color-clay-soft: #f4e5e1;
+  --color-rose: #c98b84;
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 1rem;
+}
+
+@layer base {
+  html {
+    background: var(--color-cream);
+    color: var(--color-ink);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    /* Mobile-first layouts must never bleed sideways. */
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-clay);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@utility hide-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* MapLibre: the default popup chrome fights the editorial card look. */
+.maplibregl-map {
+  font-family: var(--font-sans);
+  background: #eee7dd;
+}
+
+/* Warms and mutes the vector basemap toward the cream/terracotta palette.
+   Only the canvas is filtered, so DOM pins, route labels and the popup keep
+   their true colour. */
+.maplibregl-canvas {
+  filter: saturate(0.78) sepia(0.14) brightness(1.03) contrast(0.97);
+}
+
+.dr-popup .maplibregl-popup-content {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+.dr-popup .maplibregl-popup-tip {
+  display: none;
+}
+
+.maplibregl-ctrl-group {
+  border: 1px solid var(--color-line-strong) !important;
+  background: var(--color-paper) !important;
+  box-shadow: 0 1px 3px rgba(46, 38, 34, 0.15) !important;
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 1px solid var(--color-line) !important;
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(255, 253, 250, 0.85) !important;
+  font-size: 10px;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--color-ink-muted);
+}
