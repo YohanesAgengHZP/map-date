@@ -20,7 +20,16 @@ export type LocalStore<T> = {
   serverSnapshot: () => T;
 };
 
-export function createLocalStore<T>(key: string, fallback: T): LocalStore<T> {
+export function createLocalStore<T>(
+  key: string,
+  fallback: T,
+  /**
+   * A key this store used to live under. Read from when the current one is
+   * empty, so renaming the app does not throw away what someone already saved.
+   * Read-only: the old key is left alone until the first write to the new one.
+   */
+  legacyKey?: string,
+): LocalStore<T> {
   const fallbackRaw = JSON.stringify(fallback);
   let cache = fallback;
   let snapshot = fallbackRaw;
@@ -28,7 +37,10 @@ export function createLocalStore<T>(key: string, fallback: T): LocalStore<T> {
 
   function read(): T {
     try {
-      const raw = window.localStorage.getItem(key) ?? fallbackRaw;
+      const raw =
+        window.localStorage.getItem(key) ??
+        (legacyKey ? window.localStorage.getItem(legacyKey) : null) ??
+        fallbackRaw;
       // Cache by raw string so the snapshot is referentially stable between
       // reads. useSyncExternalStore loops forever on a fresh object each call.
       if (raw !== snapshot) {

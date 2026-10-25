@@ -13,7 +13,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Rute · afternoons around Jogja",
+  title: "Jalan-Jalan · afternoons around Jogja",
   description:
     "A few worked-out afternoons around Jogja: where to go, how long it takes, and what the place actually looks like.",
 };

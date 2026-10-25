@@ -9,7 +9,7 @@ export type Photo = {
 
 /**
  * Deliberately carries no pricing: the product is about where to go and when,
- * and a date should not read like a quote. Cost is left to the venue.
+ * and an afternoon out should not read like a quote. Cost is left to the venue.
  */
 export type Destination = {
   id: string;

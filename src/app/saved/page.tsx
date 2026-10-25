@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SavedClient } from "@/components/SavedClient";
 import { SiteHeader } from "@/components/SiteHeader";
 
-export const metadata = { title: "Saved · Rute" };
+export const metadata = { title: "Saved · Jalan-Jalan" };
 
 export default function SavedPage() {
   return (

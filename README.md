@@ -1,4 +1,4 @@
-# Rute
+# Jalan-Jalan
 
 A hangout-planning prototype for Yogyakarta: browse ready-made plans, inspect each
 stop's photos and details, see the route on an interactive map, and customise the
@@ -116,8 +116,10 @@ Verification status per field:
 
 ## Plans you make
 
-Alongside the nine that ship in `plans.ts`, you can build your own. They live in
-`localStorage` under `dateroute:myplans`, in this browser only.
+Alongside the four that ship in `plans.ts`, you can build your own. They live in
+`localStorage` under `jalanjalan:myplans`, in this browser only. The app was
+called `dateroute` before, so both stores still read the old key when the new
+one is empty: renaming should not throw away what someone already saved.
 
 - **Make your own** on Discover asks for a title, a start time and a mood, then
   drops you on an empty plan where the existing stop picker does the rest.
@@ -139,6 +141,28 @@ asserts. An id that no longer resolves is skipped rather than thrown.
 cannot know these ids: `/plan/[id]` is statically generated with
 `dynamicParams: false`. One static route plus a parameter keeps the site static.
 
+## Sharing a plan
+
+**Share** on any plan page sends the whole plan inside the link, as
+`/mine?plan=<token>`: base64url of `{title, mood, startTime, destinationIds}`.
+No backend, no accounts, no link that expires, and nothing of yours is uploaded
+anywhere. It shares the stops **currently on screen**, so a built-in plan you
+just tweaked can be passed on without saving it first.
+
+The button tries the native share sheet (the realistic case is one person
+sending to one person from a phone), falls back to the clipboard, and finally to
+a prompt holding the raw URL. A share button that silently does nothing is
+worse than an ugly one.
+
+Whoever opens the link sees the plan with a `Shared with you` chip and a **Save
+to my plans** button. Nothing is written to their browser until they press it.
+
+`decodePlan` treats the token as untrusted input, because it is: wrong shape,
+unknown mood, malformed time or a non-string id all return null and the page
+says the link did not work, rather than rendering half a plan. The stop list is
+capped at 25. `myPlans.test.ts` covers the round trip, non-ASCII titles, URL
+safety and each rejection.
+
 ## Structure
 
 ```
@@ -155,6 +179,7 @@ src/
     ItineraryStop         AddStopDialog       SafeImage
     PlanClient            SiteHeader          SavedClient
     BuiltInPlan           MyPlanClient        CreatePlanDialog
+    ShareButton
   data/                   destinations.ts, plans.ts
   lib/
     types.ts              Destination, DatePackage, TravelLeg, ItineraryStop
@@ -195,9 +220,9 @@ layer and focus containment without a focus-trap dependency.
 - No pricing anywhere, by design.
 - Six venues have approximate pins, so travel times to them are approximate
   too. They are flagged in the UI.
-- Five plans were added once the newer venues landed, so there are nine. Hou Kie
-  is the only new venue not used by one, and is reachable by editing an
-  itinerary.
+- There are four plans, grouped by what you feel like doing rather than by
+  mood. Stop order inside each is geographic, not the order the owner listed
+  them in, so a plan does not cross the city twice.
 - Jogja Art Activity has a second, newer branch in Mantrijeron. The pin is the
   Pangurakan one; no address for the other was findable.
 - Eight of the original ten pins were taken from the `@` viewport value in a
@@ -206,10 +231,11 @@ layer and focus containment without a focus-trap dependency.
   a diff of each entry's `latitude`/`longitude` against the `!3d`/`!4d` pair in
   its own `directionsUrl`.
 - `bookingRequired` is displayed as a chip but still does not affect scheduling.
-- Giorno's Pizzeria and Hou Kie are in the venue pool but not in any plan.
+- Six venues sit in the pool without being in a plan, reachable by editing an
+  itinerary: L'Union, Ryuji, the batik workshop, Jogja Art Activity, Kids Fun
+  Parcs and Ibarbo Park.
 - Workshops (batik, silver, pottery) actually run on **fixed session times**, but
   the scheduler still treats every stop as drop-in. It will happily schedule a
   14:40 arrival at a 14:00 class. Needs `sessionTimes` on `Destination` and
   snap-to-next-session in `buildItinerary`; for now the constraint is only stated
   in each description.
-# map-date

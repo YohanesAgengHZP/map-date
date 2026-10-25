@@ -13,9 +13,9 @@ export const dynamicParams = false;
 export async function generateMetadata({ params }: PageProps<"/plan/[id]">) {
   const { id } = await params;
   const plan = getPlan(id);
-  if (!plan) return { title: "Plan not found · Rute" };
+  if (!plan) return { title: "Plan not found · Jalan-Jalan" };
   return {
-    title: `${plan.title} · Rute`,
+    title: `${plan.title} · Jalan-Jalan`,
     description: plan.description,
   };
 }

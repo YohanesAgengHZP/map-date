@@ -2,7 +2,7 @@ import { parseClock } from "./format";
 import type { Destination, ItineraryStop, TravelLeg } from "./types";
 
 /**
- * Lay out the date on a clock.
+ * Lay out the plan on a clock.
  *
  * Total estimated duration = sum of visit durations + sum of travel durations.
  * A leg whose travel time is unavailable contributes 0 minutes to the schedule

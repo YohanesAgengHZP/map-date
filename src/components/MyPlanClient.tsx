@@ -2,25 +2,38 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
-import { Trash2 } from "lucide-react";
-import { toPlan, useMyPlans } from "@/lib/myPlans";
+import { useCallback, useMemo, useState } from "react";
+import { BookmarkPlus, Trash2 } from "lucide-react";
+import { createMyPlan, decodePlan, toPlan, useMyPlans } from "@/lib/myPlans";
 import { PlanClient } from "./PlanClient";
+import { ShareButton } from "./ShareButton";
 import { Button } from "./ui";
 
 /**
- * A plan the user made, addressed by `?id=`.
+ * Two things live on this route:
  *
- * It is a query parameter rather than `/mine/[id]` because these plans live in
- * localStorage: the server cannot know the ids at build time, and `/plan/[id]`
- * is statically generated with `dynamicParams: false`. One static route plus a
- * parameter keeps the whole site static.
+ * - `?id=`   a plan of your own, read from localStorage and saved as you edit.
+ * - `?plan=` a plan somebody sent you, carried entirely inside the link. It is
+ *            not yours until you save it, so nothing is written on arrival.
+ *
+ * Query parameters rather than `/mine/[id]` because the server cannot know
+ * these ids: `/plan/[id]` is statically generated with `dynamicParams: false`.
+ * One static route plus a parameter keeps the whole site static.
  */
 export function MyPlanClient() {
   const router = useRouter();
-  const id = useSearchParams().get("id");
-  const { plans, remove, setStops } = useMyPlans();
+  const params = useSearchParams();
+  const id = params.get("id");
+  const token = params.get("plan");
+  const { plans, add, remove, setStops } = useMyPlans();
   const [deleting, setDeleting] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const shared = useMemo(() => {
+    if (!token) return null;
+    const decoded = decodePlan(token);
+    return decoded ? createMyPlan(decoded) : null;
+  }, [token]);
 
   const saved = plans.find((p) => p.id === id);
 
@@ -31,13 +44,17 @@ export function MyPlanClient() {
     [saved, setStops],
   );
 
-  if (!saved) {
+  if (!saved && !shared) {
+    const badLink = Boolean(token);
     return (
       <div className="mx-auto max-w-6xl px-4 py-20 text-center sm:px-6">
-        <h1 className="text-2xl">That plan is not here</h1>
+        <h1 className="text-2xl">
+          {badLink ? "That link did not work" : "That plan is not here"}
+        </h1>
         <p className="text-ink-soft mx-auto mt-2 max-w-md text-sm leading-relaxed">
-          Plans you make are kept in this browser only, so a link to one will
-          not open anywhere else, and clearing site data removes them.
+          {badLink
+            ? "A shared plan travels inside its link, so it only opens if the whole link arrived in one piece. Ask for it again, and check nothing was cut off at the end."
+            : "Plans you make are kept in this browser only, so a link to one will not open anywhere else, and clearing site data removes them."}
         </p>
         <Link href="/" className="mt-6 inline-block">
           <Button variant="secondary">Back to plans</Button>
@@ -45,6 +62,42 @@ export function MyPlanClient() {
       </div>
     );
   }
+
+  // A shared plan is shown but not stored until the reader asks for it.
+  if (shared && !saved) {
+    const keep = () => {
+      add(shared);
+      setSaving(true);
+      router.replace(`/mine?id=${shared.id}`);
+    };
+
+    return (
+      <PlanClient
+        key={shared.id}
+        plan={{ ...toPlan(shared), tags: ["Shared with you"] }}
+        headerAction={
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <ShareButton
+              title={shared.title}
+              mood={shared.mood}
+              startTime={shared.startTime}
+              destinationIds={shared.destinationIds}
+            />
+            <Button
+              onClick={keep}
+              disabled={saving}
+              className="shrink-0 bg-white/15 text-white backdrop-blur hover:bg-white/25"
+            >
+              <BookmarkPlus size={15} aria-hidden />
+              {saving ? "Saving..." : "Save to my plans"}
+            </Button>
+          </div>
+        }
+      />
+    );
+  }
+
+  if (!saved) return null;
 
   const confirmDelete = () => {
     if (!deleting) {
@@ -64,14 +117,22 @@ export function MyPlanClient() {
       owned
       onStopsChange={onStopsChange}
       headerAction={
-        <Button
-          onClick={confirmDelete}
-          onBlur={() => setDeleting(false)}
-          className="shrink-0 bg-white/15 text-white backdrop-blur hover:bg-white/25"
-        >
-          <Trash2 size={15} aria-hidden />
-          {deleting ? "Tap again to delete" : "Delete this plan"}
-        </Button>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <ShareButton
+            title={saved.title}
+            mood={saved.mood}
+            startTime={saved.startTime}
+            destinationIds={saved.destinationIds}
+          />
+          <Button
+            onClick={confirmDelete}
+            onBlur={() => setDeleting(false)}
+            className="shrink-0 bg-white/15 text-white backdrop-blur hover:bg-white/25"
+          >
+            <Trash2 size={15} aria-hidden />
+            {deleting ? "Tap again to delete" : "Delete this plan"}
+          </Button>
+        </div>
       }
     />
   );

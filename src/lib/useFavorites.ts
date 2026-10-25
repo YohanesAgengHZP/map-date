@@ -4,7 +4,11 @@ import { useCallback } from "react";
 import { createLocalStore, useLocalStore } from "./localStore";
 
 /** Saved destinations, persisted in localStorage. See `localStore.ts`. */
-const store = createLocalStore<string[]>("dateroute:favorites", []);
+const store = createLocalStore<string[]>(
+  "jalanjalan:favorites",
+  [],
+  "dateroute:favorites",
+);
 
 export function useFavorites() {
   const favoriteIds = useLocalStore(store);

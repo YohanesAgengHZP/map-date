@@ -10,7 +10,7 @@ export function SiteHeader() {
           className="text-ink flex items-center gap-2 text-base font-semibold"
         >
           <Route size={18} className="text-clay" aria-hidden />
-          <span className="font-display">Rute</span>
+          <span className="font-display">Jalan-Jalan</span>
         </Link>
 
         <nav aria-label="Primary" className="ml-auto">

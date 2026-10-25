@@ -29,7 +29,11 @@ export type MyPlan = {
 type Saved = { plans: MyPlan[]; hidden: string[] };
 
 const EMPTY: Saved = { plans: [], hidden: [] };
-const store = createLocalStore<Saved>("dateroute:myplans", EMPTY);
+const store = createLocalStore<Saved>(
+  "jalanjalan:myplans",
+  EMPTY,
+  "dateroute:myplans",
+);
 
 /** Ids are prefixed so a saved plan can never collide with a built-in one. */
 export const MY_PLAN_PREFIX = "mine-";
@@ -70,7 +74,9 @@ export function toPlan(saved: MyPlan): Plan {
     description:
       destinations.length === 0
         ? "Nothing in this one yet. Add a stop to get started."
-        : `Your own plan: ${destinations.map((d) => d.name).join(", then ")}.`,
+        : // Says no more than the stops: the same text is shown on a plan
+          // somebody else shared, where "your plan" would be a lie.
+          `${destinations.map((d) => d.name).join(", then ")}.`,
     coverPhoto: cover ?? {
       id: `${saved.id}-cover`,
       url: "",
@@ -81,6 +87,72 @@ export function toPlan(saved: MyPlan): Plan {
     tags: ["Yours"],
     startTime: saved.startTime,
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * Sharing
+ *
+ * A plan lives in one browser, so the only way to show someone else is to
+ * put the whole thing in the link. Ids and a title are small enough to fit,
+ * and it means no backend, no accounts and no expiring links.
+ * ------------------------------------------------------------------ */
+
+type SharedPlan = Omit<MyPlan, "id" | "createdAt">;
+
+const MOOD_VALUES: Mood[] = ["cozy", "heritage", "outdoorsy", "foodie", "artsy"];
+
+function toBase64Url(text: string): string {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function fromBase64Url(token: string): string {
+  const binary = atob(token.replace(/-/g, "+").replace(/_/g, "/"));
+  return new TextDecoder().decode(
+    Uint8Array.from(binary, (char) => char.charCodeAt(0)),
+  );
+}
+
+/** Short keys because this ends up in a URL someone pastes into a chat. */
+export function encodePlan(plan: SharedPlan): string {
+  return toBase64Url(
+    JSON.stringify({
+      t: plan.title,
+      m: plan.mood,
+      s: plan.startTime,
+      d: plan.destinationIds,
+    }),
+  );
+}
+
+/**
+ * Anything arriving here came out of a URL, so none of it is trusted: a bad
+ * token returns null and the page says so, rather than rendering half a plan
+ * or throwing. Unknown venue ids are dropped by `getDestinations` downstream.
+ */
+export function decodePlan(token: string): SharedPlan | null {
+  try {
+    const raw: unknown = JSON.parse(fromBase64Url(token));
+    if (typeof raw !== "object" || raw === null) return null;
+    const { t, m, s, d } = raw as Record<string, unknown>;
+
+    if (typeof t !== "string" || t.length === 0 || t.length > 120) return null;
+    if (typeof m !== "string" || !MOOD_VALUES.includes(m as Mood)) return null;
+    if (typeof s !== "string" || !/^\d{2}:\d{2}$/.test(s)) return null;
+    if (!Array.isArray(d) || d.some((id) => typeof id !== "string")) return null;
+
+    return {
+      title: t,
+      mood: m as Mood,
+      startTime: s,
+      // Cap the list so a hand-made link cannot ask for thousands of stops.
+      destinationIds: (d as string[]).slice(0, 25),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function useMyPlans() {
