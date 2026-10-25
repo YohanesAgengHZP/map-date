@@ -8,7 +8,7 @@ import { calculateTotals } from "@/lib/itinerary";
 import { estimateRoute } from "@/lib/routing";
 
 export default function DiscoverPage() {
-  const entries: PlanEntry[] = PLANS.map((plan, index) => {
+  const entries: PlanEntry[] = PLANS.map((plan) => {
     const destinations = getDestinations(plan.destinationIds);
     const { legs } = estimateRoute(destinations);
     const totals = calculateTotals(destinations, legs);
@@ -18,7 +18,7 @@ export default function DiscoverPage() {
       mood: plan.mood,
       tags: plan.tags,
       totalMinutes: totals.totalMinutes,
-      card: <PlanCard plan={plan} priority={index === 0} />,
+      card: <PlanCard plan={plan} />,
     };
   });
 

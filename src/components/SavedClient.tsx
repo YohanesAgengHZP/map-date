@@ -6,7 +6,7 @@ import { getDestinations } from "@/data/destinations";
 import { formatDuration } from "@/lib/format";
 import { useFavorites } from "@/lib/useFavorites";
 import { DestinationDetailModal } from "./DestinationDetailModal";
-import { SafeImage } from "./SafeImage";
+import { CategoryIcon } from "./CategoryIcon";
 import { Button } from "./ui";
 
 export function SavedClient() {
@@ -31,12 +31,8 @@ export function SavedClient() {
             key={destination.id}
             className="border-line bg-paper overflow-hidden rounded-2xl border"
           >
-            <div className="relative aspect-[4/3]">
-              <SafeImage
-                src={destination.photos[0]?.url}
-                alt={destination.photos[0]?.alt ?? destination.name}
-                sizes="(max-width: 640px) 100vw, 33vw"
-              />
+            <div className="relative aspect-[5/2]">
+              <CategoryIcon category={destination.category} size={34} />
               <button
                 type="button"
                 onClick={() => toggle(destination.id)}

@@ -2,16 +2,17 @@
 
 import { useCallback } from "react";
 import { getDestinations } from "@/data/destinations";
-import { createLocalStore, useLocalStore } from "./localStore";
+import { createLocalStore } from "./localStore";
+import { useLocalStore } from "./useLocalStore";
 import type { Mood, Plan } from "./types";
 
 /**
  * Plans the user made, plus the built-in plans they have hidden.
  *
- * Stored as ids and a title rather than a whole `Plan`: the cover photo and the
- * summary line are derived from `destinations.ts` at render time, so a venue
- * that gains a photo or changes its name updates inside saved plans too. A
- * snapshotted copy would quietly go stale.
+ * Stored as ids and a title rather than a whole `Plan`: the summary line is
+ * derived from `destinations.ts` at render time, so a venue that changes its
+ * name updates inside saved plans too. A snapshotted copy would quietly go
+ * stale.
  *
  * Built-ins are hidden, never deleted. They live in the repo, so "delete" would
  * be a lie, and a hidden list is reversible from the UI.
@@ -66,7 +67,6 @@ export function createMyPlan(input: {
  */
 export function toPlan(saved: MyPlan): Plan {
   const destinations = getDestinations(saved.destinationIds);
-  const cover = destinations.flatMap((d) => d.photos)[0];
 
   return {
     id: saved.id,
@@ -77,11 +77,6 @@ export function toPlan(saved: MyPlan): Plan {
         : // Says no more than the stops: the same text is shown on a plan
           // somebody else shared, where "your plan" would be a lie.
           `${destinations.map((d) => d.name).join(", then ")}.`,
-    coverPhoto: cover ?? {
-      id: `${saved.id}-cover`,
-      url: "",
-      alt: saved.title,
-    },
     mood: saved.mood,
     destinationIds: saved.destinationIds,
     tags: ["Yours"],

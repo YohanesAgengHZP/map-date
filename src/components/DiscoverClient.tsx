@@ -11,7 +11,6 @@ import { estimateRoute } from "@/lib/routing";
 import type { Mood } from "@/lib/types";
 import { CreatePlanDialog } from "./CreatePlanDialog";
 import { PlanCard } from "./PlanCard";
-import { SafeImage } from "./SafeImage";
 import { Button, cx } from "./ui";
 
 /**
@@ -99,18 +98,13 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
   return (
     <>
       <section className="relative mx-auto max-w-6xl px-4 pt-6 sm:px-6">
-        <div className="relative overflow-hidden rounded-3xl">
-          <div className="relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[21/9]">
-            <SafeImage
-              src="/venues/mediterranea/1.webp"
-              alt="Dining room with string lights and potted plants at Mediterranea"
-              sizes="100vw"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#241a16]/85 via-[#241a16]/45 to-transparent" />
-          </div>
-
-          <div className="absolute inset-0 flex flex-col justify-end p-5 sm:justify-center sm:p-10 lg:p-14">
+        {/* Was a photo with the copy laid over it, which is why this used to
+            be an aspect-ratio box with an absolutely positioned overlay. With
+            no photograph there is nothing to size to, so the panel simply
+            wraps its own content: no fixed ratio, no overlay, and no empty
+            right-hand third at desktop widths. */}
+        <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#2e2622] to-[#241a16]">
+          <div className="flex flex-col p-6 sm:p-10 lg:p-12">
             <div className="max-w-md">
               <h1 className="text-3xl leading-[1.1] text-white sm:text-4xl lg:text-5xl">
                 So, where
@@ -118,8 +112,9 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
                 are we going?
               </h1>
               <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/80 sm:text-base">
-                A few afternoons around Jogja, already worked out. Where to go,
-                how long it takes, and what the place actually looks like.
+                A few afternoons around Jogja, already worked out. Where to
+                go, how long it takes, and how far apart everything is. Add
+                anywhere else you like by searching for it.
               </p>
             </div>
 
@@ -168,28 +163,30 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
                     "focus-visible:outline-clay",
                   )}
                 >
+                  {/* These were photo tiles. A mood is not a category, so
+                      there is no icon that honestly stands for "Cozy" the way
+                      one stands for "Pizzeria": the label and its blurb say it
+                      better than a picked symbol would. */}
                   <span
                     className={cx(
-                      "relative block aspect-[4/3] overflow-hidden rounded-xl border-2 transition-colors",
-                      selected ? "border-clay" : "border-transparent",
+                      "block rounded-xl border-2 px-3 py-3 transition-colors",
+                      selected
+                        ? "border-clay bg-clay-soft/50"
+                        : "border-line bg-paper group-hover:border-clay/40",
                     )}
                   >
-                    <SafeImage
-                      src={item.photo}
-                      alt={item.alt}
-                      sizes="(max-width: 640px) 128px, 16vw"
-                      className="transition-transform duration-500 group-hover:scale-105"
-                    />
+                    <span
+                      className={cx(
+                        "block text-sm font-medium",
+                        selected ? "text-clay" : "text-ink",
+                      )}
+                    >
+                      {item.label}
+                    </span>
+                    <span className="text-ink-muted mt-0.5 block text-xs leading-snug">
+                      {item.blurb}
+                    </span>
                   </span>
-                  <span
-                    className={cx(
-                      "mt-2 block text-sm font-medium",
-                      selected ? "text-clay" : "text-ink",
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                  <span className="text-ink-muted block text-xs">{item.blurb}</span>
                 </button>
               </li>
             );

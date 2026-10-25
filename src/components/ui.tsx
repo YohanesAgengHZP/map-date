@@ -86,9 +86,10 @@ export function Button({
 export function SampleNote({ className }: { className?: string }) {
   return (
     <p className={cx("text-ink-muted text-xs leading-relaxed", className)}>
-      Every place here is real and so is every photo. Hours only show up when
-      somewhere actually publishes them, a few pins are rough, and travel times
-      come from a live routing service.
+      Every place here is real. Hours only show up when somewhere actually
+      publishes them, a few pins are rough, and travel times come from a live
+      routing service. No photos: the places you search for come from
+      OpenStreetMap, which does not carry any.
     </p>
   );
 }

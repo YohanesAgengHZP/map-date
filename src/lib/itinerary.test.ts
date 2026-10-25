@@ -1,5 +1,3 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DESTINATIONS, getDestinations } from "@/data/destinations";
 import { PLANS } from "@/data/plans";
@@ -178,40 +176,16 @@ describe("real-asset data integrity", () => {
     }
   });
 
-  it("serves every photo from the local real-asset folder", () => {
-    const urls = [
-      ...DESTINATIONS.flatMap((d) => d.photos.map((p) => p.url)),
-      ...PLANS.map((p) => p.coverPhoto.url),
-    ];
-    expect(urls.length).toBeGreaterThan(0);
-    for (const url of urls) {
-      expect(url).toMatch(/^\/venues\/[a-z-]+\/\d+\.webp$/);
-    }
-  });
-
-  it("points every photo at a file that actually exists on disk", () => {
-    const urls = [
-      ...DESTINATIONS.flatMap((d) => d.photos.map((p) => p.url)),
-      ...PLANS.map((p) => p.coverPhoto.url),
-    ];
-    const missing = urls.filter(
-      (url) => !existsSync(join(process.cwd(), "public", url)),
-    );
-    expect(missing).toEqual([]);
-  });
-
-  it("gives every photo non-empty alt text", () => {
-    for (const d of DESTINATIONS) {
-      for (const p of d.photos) expect(p.alt.trim().length).toBeGreaterThan(10);
-    }
-  });
-
-  it("has a real photo for every destination", () => {
-    // Every venue has its own photos again; nothing falls back to a placeholder.
-    const awaitingPhotos = DESTINATIONS.filter((d) => d.photos.length === 0).map(
-      (d) => d.id,
-    );
-    expect(awaitingPhotos).toEqual([]);
+  it("carries no photo fields or image assets anywhere in the data", () => {
+    // The app has no imagery at all: OpenStreetMap has none for searched
+    // places, so built-in venues do not get any either. Guards against a
+    // photo field creeping back into one entry and not the rest.
+    //
+    // Matches field names and asset paths, not the word itself: Mohan Burger
+    // genuinely has a photobox in it, and that is a fact about the venue.
+    const serialised = JSON.stringify(DESTINATIONS) + JSON.stringify(PLANS);
+    expect(serialised).not.toMatch(/"(photos|coverPhoto)"/);
+    expect(serialised).not.toMatch(/\.webp|\/venues\//i);
   });
 
   it("keeps em dashes and ellipsis characters out of the copy", () => {

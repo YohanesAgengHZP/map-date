@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -11,21 +11,28 @@ import {
   Navigation,
   Route,
 } from "lucide-react";
-import { DESTINATIONS, getDestinations } from "@/data/destinations";
+import {
+  DESTINATIONS,
+  getDestination,
+  getDestinations,
+} from "@/data/destinations";
+import { addCustomPlace, customPlacesStore } from "@/lib/customPlaces";
 import {
   formatDistance,
   formatDuration,
   formatDurationBand,
 } from "@/lib/format";
 import { buildItinerary, calculateTotals, moveItem } from "@/lib/itinerary";
+import { lookupPlaces } from "@/lib/places";
 import { buildDirectionsUrl, estimateRoute, getRoute } from "@/lib/routing";
 import { useFavorites } from "@/lib/useFavorites";
-import type { Plan, RouteResult } from "@/lib/types";
+import { useLocalStore } from "@/lib/useLocalStore";
+import type { Destination, Plan, RouteResult } from "@/lib/types";
 import { AddStopDialog } from "./AddStopDialog";
 import { DestinationDetailModal } from "./DestinationDetailModal";
 import { ItineraryPanel } from "./ItineraryPanel";
 import { PlanSummary } from "./PlanSummary";
-import { SafeImage } from "./SafeImage";
+import { iconFor } from "./CategoryIcon";
 import { Chip, SampleNote, cx } from "./ui";
 
 // MapLibre GL touches `window` at import time, so the map never server-renders.
@@ -65,8 +72,67 @@ export function PlanClient({
   const [addStopOpen, setAddStopOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"itinerary" | "map">("itinerary");
   const { isFavorite, toggle } = useFavorites();
+  const customPlaces = useLocalStore(customPlacesStore);
 
-  const destinations = useMemo(() => getDestinations(stopIds), [stopIds]);
+  // `customPlaces` is in the deps because `getDestinations` reads the live-place
+  // cache internally, which the lint rule cannot see. Dropping it, as the rule
+  // suggests, leaves this memo stale when a shared plan's stops arrive from
+  // Overpass a moment after first paint.
+  const destinations = useMemo(
+    () => getDestinations(stopIds),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stopIds, customPlaces],
+  );
+
+  /**
+   * Stops this browser has never seen, which is what a shared link looks like
+   * when it names a place the reader did not search for themselves. Every live
+   * id is an OSM object id, so it can be fetched back.
+   *
+   * `attempted` stops a plan whose stops OSM has since deleted from being
+   * asked for again on every edit: those ids stay missing no matter how often
+   * we ask. It is marked on settle, never up front, because a run that gets
+   * torn down answered nothing. Marking early means StrictMode's remount
+   * aborts the only request and the retry finds nothing left to ask for.
+   */
+  const attempted = useRef(new Set<string>());
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    const missing = stopIds.filter(
+      (id) => !getDestination(id) && !attempted.current.has(id),
+    );
+    if (missing.length === 0) return;
+
+    let active = true;
+    const controller = new AbortController();
+    setResolving(true);
+
+    lookupPlaces(missing, controller.signal)
+      .then((found) => {
+        for (const place of found) addCustomPlace(place);
+      })
+      .catch((error: unknown) => {
+        if (active) console.error("Could not resolve shared stops", error);
+      })
+      .finally(() => {
+        if (!active) return;
+        for (const id of missing) attempted.current.add(id);
+        setResolving(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [stopIds]);
+
+  /**
+   * Stops the plan names that nothing could resolve. Said out loud rather than
+   * dropped quietly: a shared plan that renders four of its five stops with no
+   * explanation looks like the sender's plan, not like a failure.
+   */
+  const unresolvedCount = resolving ? 0 : stopIds.length - destinations.length;
 
   // Start from the offline estimate so the first paint has real numbers, then
   // replace it with the routed answer when the provider responds.
@@ -103,8 +169,17 @@ export function PlanClient({
   );
 
   const totalMeters = route.legs.reduce((sum, leg) => sum + (leg.meters ?? 0), 0);
-  const detailDestination = DESTINATIONS.find((d) => d.id === detailId);
-  const addOptions = DESTINATIONS.filter((d) => !stopIds.includes(d.id));
+  const detailDestination = detailId ? getDestination(detailId) : undefined;
+
+  // Built-ins plus everywhere the user has already searched out, so a place
+  // added to one plan is one tap away in the next without searching again.
+  const addOptions = useMemo(
+    () =>
+      [...DESTINATIONS, ...customPlaces].filter(
+        (d) => !stopIds.includes(d.id),
+      ),
+    [customPlaces, stopIds],
+  );
 
   const selectStop = (id: string) => setSelectedId(id);
 
@@ -135,19 +210,43 @@ export function PlanClient({
     setAddStopOpen(false);
   };
 
+  /**
+   * Adding from search caches the whole record first. A plan stores only ids,
+   * and a live place has no entry in `destinations.ts` to resolve an id
+   * against, so skipping the cache would add a stop that cannot be rendered.
+   */
+  const addPlace = (place: Destination) => {
+    if (!getDestination(place.id)) addCustomPlace(place);
+    addStop(place.id);
+  };
+
   const directionsUrl = buildDirectionsUrl(destinations);
 
   return (
     <>
       <section className="relative">
-        <div className="relative h-56 sm:h-72 lg:h-80">
-          <SafeImage
-            src={plan.coverPhoto.url}
-            alt={plan.coverPhoto.alt}
-            sizes="100vw"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#241a16]/85 via-[#241a16]/35 to-[#241a16]/25" />
+        {/* The hero was a full-bleed cover photo. It is now the same dark band
+            without one, so the white title, chips and header buttons keep
+            working unchanged. Shorter than the photo version, because a solid
+            colour does not earn 20rem, with the plan's own category icons set
+            faintly into the right as texture rather than decoration. */}
+        <div className="relative h-44 overflow-hidden bg-gradient-to-br from-[#2e2622] to-[#241a16] sm:h-52">
+          <div
+            aria-hidden
+            className="absolute inset-y-0 right-0 flex items-center gap-6 pr-6 opacity-[0.09] sm:gap-10 sm:pr-10"
+          >
+            {destinations.slice(0, 4).map((destination, index) => {
+              const Icon = iconFor(destination.category);
+              return (
+                <Icon
+                  key={`${destination.id}-${index}`}
+                  size={88}
+                  strokeWidth={0.75}
+                  className="text-white"
+                />
+              );
+            })}
+          </div>
         </div>
 
         <div className="absolute inset-0 mx-auto flex max-w-6xl flex-col px-4 py-4 sm:px-6">
@@ -204,6 +303,15 @@ export function PlanClient({
         <p className="text-ink-soft mt-4 max-w-2xl text-sm leading-relaxed">
           {plan.description}
         </p>
+
+        {unresolvedCount > 0 ? (
+          <p className="border-line text-ink-soft mt-4 max-w-2xl rounded-xl border border-dashed p-3 text-xs leading-relaxed">
+            {unresolvedCount === 1 ? "One stop" : `${unresolvedCount} stops`} in
+            this plan could not be loaded. Places added from OpenStreetMap are
+            fetched again when the plan is opened, so this usually means the
+            lookup failed or the place is no longer on the map.
+          </p>
+        ) : null}
       </div>
 
       {/* Mobile switches between the list and the map; desktop shows both. */}
@@ -310,8 +418,9 @@ export function PlanClient({
       <AddStopDialog
         open={addStopOpen}
         options={addOptions}
+        excludeIds={stopIds}
         onClose={() => setAddStopOpen(false)}
-        onAdd={addStop}
+        onAdd={addPlace}
       />
     </>
   );

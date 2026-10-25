@@ -27,22 +27,11 @@ describe("plans the user makes", () => {
       createMyPlan({ title: "Empty", mood: "artsy", startTime: "09:00" }),
     );
     expect(empty.destinationIds).toEqual([]);
-    // An empty plan still has to render: no stops means no photo to borrow.
-    expect(empty.coverPhoto.url).toBe("");
-    expect(empty.coverPhoto.alt).toBe("Empty");
-  });
-
-  it("borrows its cover photo from the first stop that has one", () => {
-    const plan = toPlan(
-      createMyPlan({
-        title: "Dinner",
-        mood: "foodie",
-        startTime: "18:00",
-        destinationIds: ["babi-toba-tabo", "hou-kie"],
-      }),
-    );
-    expect(plan.coverPhoto.url).toBe("/venues/babi-toba-tabo/1.webp");
-    expect(plan.tags).toEqual(["Yours"]);
+    // An empty plan still has to render, and say so rather than look broken.
+    expect(empty.title).toBe("Empty");
+    expect(empty.description).toContain("Nothing in this one yet");
+    // Marks it as the user's own wherever it gets listed.
+    expect(empty.tags).toEqual(["Yours"]);
   });
 
   it("drops ids of venues that no longer exist instead of throwing", () => {
@@ -55,7 +44,7 @@ describe("plans the user makes", () => {
       }),
     );
     // destinationIds keeps what was saved; the derived copy skips the unknown.
-    expect(plan.coverPhoto.url).toBe("/venues/hou-kie/1.webp");
+    expect(plan.destinationIds).toEqual(["deleted-venue", "hou-kie"]);
     expect(plan.description).toContain("Hou Kie");
     expect(plan.description).not.toContain("deleted-venue");
   });

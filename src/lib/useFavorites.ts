@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { createLocalStore, useLocalStore } from "./localStore";
+import { createLocalStore } from "./localStore";
+import { useLocalStore } from "./useLocalStore";
 
 /** Saved destinations, persisted in localStorage. See `localStore.ts`. */
 const store = createLocalStore<string[]>(
