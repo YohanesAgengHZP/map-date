@@ -183,26 +183,47 @@ export function CategoryPattern({
 export function CategoryIcon({
   category,
   size = 20,
+  pattern = false,
   className,
 }: {
   category: string;
   size?: number;
+  /**
+   * Tile the icon faintly behind itself. Off by default: in the 56px square
+   * beside a search result there is no room for texture, and a pattern that
+   * small is just noise. On for the few callers with a photo-shaped box to
+   * fill, where a single small icon on a flat field looks like a failed image.
+   */
+  pattern?: boolean;
   className?: string;
 }) {
   return (
     <span
       aria-hidden
       className={cx(
-        "flex h-full w-full items-center justify-center",
+        "relative flex h-full w-full items-center justify-center overflow-hidden",
         tintFor(category),
         className,
       )}
     >
+      {/* No colour of its own, so it inherits the tint's: a green park tiles
+          in the park green, and adding a category to `ICONS` needs no second
+          decision about what its pattern looks like. */}
+      {pattern ? (
+        <CategoryPattern
+          categories={[category]}
+          tiles={18}
+          className="opacity-20"
+        />
+      ) : null}
+
       {/* `createElement` rather than binding the icon to a capitalised local
           and rendering `<Icon />`: the lint rule reads that as building a
           component mid-render. The reference is a stable module constant, but
           this says so plainly instead of arguing with the rule. */}
-      {createElement(iconFor(category), { size, strokeWidth: 1.5 })}
+      <span className="relative">
+        {createElement(iconFor(category), { size, strokeWidth: 1.5 })}
+      </span>
     </span>
   );
 }

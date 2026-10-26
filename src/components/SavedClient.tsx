@@ -35,7 +35,10 @@ export function SavedClient() {
             className="border-line bg-paper overflow-hidden rounded-2xl border"
           >
             <div className="relative aspect-[5/2]">
-              <CategoryIcon category={destination.category} size={34} />
+              {/* The one place with a whole 5:2 box and a single icon to put
+                  in it, so it tiles: patternless, this was the emptiest
+                  surface left in the app. */}
+              <CategoryIcon category={destination.category} size={34} pattern />
               <button
                 type="button"
                 onClick={() => toggle(destination.id)}
