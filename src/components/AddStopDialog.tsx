@@ -158,10 +158,10 @@ export function AddStopDialog({
             className="text-ink-muted mt-2 text-[11px] leading-tight"
           >
             {failed
-              ? "Could not reach OpenStreetMap search. Check your connection and try again."
+              ? "Could not search just now. Check your connection and try again."
               : searching
-                ? "Searching OpenStreetMap..."
-                : "Anywhere in the world, from OpenStreetMap."}
+                ? "Looking..."
+                : "Type the name of anywhere you want to go."}
           </p>
         </div>
 
@@ -185,7 +185,7 @@ export function AddStopDialog({
 
             {remote.length > 0 ? (
               <li className="text-ink-muted px-2 pt-4 pb-1 text-[11px] font-semibold tracking-wide uppercase">
-                From OpenStreetMap
+                Found on the map
               </li>
             ) : null}
 

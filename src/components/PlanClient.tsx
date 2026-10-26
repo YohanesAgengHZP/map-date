@@ -330,9 +330,9 @@ export function PlanClient({
         {unresolvedCount > 0 ? (
           <p className="border-line text-ink-soft mt-4 max-w-2xl rounded-xl border border-dashed p-3 text-xs leading-relaxed">
             {unresolvedCount === 1 ? "One stop" : `${unresolvedCount} stops`} in
-            this plan could not be loaded. Places added from OpenStreetMap are
-            fetched again when the plan is opened, so this usually means the
-            lookup failed or the place is no longer on the map.
+            this plan would not load. Places you searched for are looked up
+            again each time the plan is opened, so either the connection failed
+            or the place is no longer on the map.
           </p>
         ) : null}
       </div>

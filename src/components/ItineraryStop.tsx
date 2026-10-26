@@ -121,7 +121,7 @@ export function ItineraryStop({
             <Navigation size={12} aria-hidden />
           )}
           {travelToNext.minutes === null ? (
-            <span>No travel estimate</span>
+            <span>Travel time unknown</span>
           ) : (
             <span>
               {formatDuration(travelToNext.minutes)}
@@ -129,7 +129,7 @@ export function ItineraryStop({
               {travelToNext.meters !== null
                 ? ` · ${formatDistance(travelToNext.meters)}`
                 : ""}
-              {travelToNext.source === "estimated" ? " (est.)" : ""}
+              {travelToNext.source === "estimated" ? " (roughly)" : ""}
             </span>
           )}
         </p>
