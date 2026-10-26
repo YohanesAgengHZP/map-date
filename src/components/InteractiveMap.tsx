@@ -14,7 +14,6 @@ import {
   setWorkerUrl,
   type GeoJSONSource,
 } from "maplibre-gl";
-import { Maximize2 } from "lucide-react";
 import { formatDuration } from "@/lib/format";
 import type { Destination, LatLng, TravelLeg } from "@/lib/types";
 import { MapPinPreview } from "./MapPinPreview";
@@ -335,7 +334,17 @@ export default function InteractiveMap({
       (popupRef.current = new Popup({
         closeButton: false,
         closeOnClick: true,
-        offset: [0, -46],
+        /**
+         * Pinned above the marker rather than left to MapLibre. Without an
+         * explicit anchor the library picks one from the space available and
+         * will happily centre the card on the pin, which put the pin on top of
+         * the venue's name. The offset clears a selected pin, which is 50px
+         * tall: `createPin` draws 40 and `paintPin` scales the active one by
+         * 1.25. The old -46 did not clear it even when the anchor went the
+         * right way.
+         */
+        anchor: "bottom",
+        offset: [0, -56],
         className: "dr-popup",
         maxWidth: "none",
       }).setDOMContent(popupHost));
@@ -374,17 +383,14 @@ export default function InteractiveMap({
         </div>
       ) : null}
 
-      <button
-        type="button"
-        onClick={() => {
-          if (!map || points.length < 2) return;
-          map.fitBounds(boundsOf(points), { ...FIT_OPTIONS, duration: 600 });
-        }}
-        aria-label="Fit all stops in view"
-        className="border-line-strong bg-paper text-ink hover:bg-clay-soft absolute right-2.5 bottom-24 z-10 flex size-9 items-center justify-center rounded-lg border shadow-sm transition-colors"
-      >
-        <Maximize2 size={15} aria-hidden />
-      </button>
+      {/* No "fit all stops" button. It was positioned by hand at
+          `bottom-24 right-2.5`, which is a guess at where MapLibre puts its own
+          zoom control, and the guess was wrong: the two sat on top of each
+          other. Nothing was lost by dropping it — the map already fits the
+          stops on load, whenever the stops change, and when the map tab is
+          revealed, and its expand icon read as fullscreen to everyone who saw
+          it. If it comes back it should be a real MapLibre control so the
+          library stacks it instead of us. */}
 
       {popupHost && selected
         ? createPortal(

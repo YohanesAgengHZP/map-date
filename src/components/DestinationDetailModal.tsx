@@ -126,7 +126,7 @@ export function DestinationDetailModal({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
             <div className="space-y-4">
               {destination.rating !== undefined ? (
                 <p className="text-ink-soft flex items-center gap-1.5 text-sm">

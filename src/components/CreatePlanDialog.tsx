@@ -74,7 +74,12 @@ export function CreatePlanDialog({
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Saturday, probably food"
               maxLength={60}
-              className="border-line focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-sm focus:outline-none"
+              /* No `focus:outline-none`. It was being replaced by a one-pixel
+                 border recolour, which is weaker than the two-pixel clay ring
+                 `globals.css` already gives every `:focus-visible`, and it
+                 fired on mouse clicks too because it was `focus:` rather than
+                 `focus-visible:`. Letting the global ring do its job. */
+              className="border-field focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-sm"
             />
           </label>
 
@@ -88,7 +93,7 @@ export function CreatePlanDialog({
               value={startTime}
               onChange={(event) => setStartTime(event.target.value)}
               required
-              className="border-line focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-sm focus:outline-none"
+              className="border-field focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-sm"
             />
           </label>
 
@@ -107,7 +112,9 @@ export function CreatePlanDialog({
                     "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
                     mood === item.id
                       ? "bg-clay text-white"
-                      : "border-line text-ink-soft hover:bg-clay-soft border",
+                      // Outlined, so its border is what identifies it as a
+                      // control. The selected one is filled and exempt.
+                      : "border-field text-ink-soft hover:bg-clay-soft border",
                   )}
                 >
                   {item.label}

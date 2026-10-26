@@ -6,10 +6,24 @@
   --color-paper: #fffdfa;
   --color-line: #ebe0d4;
   --color-line-strong: #ddcdbd;
+  /* The edge of a form control, and nothing else.
+     WCAG 1.4.11 asks for 3:1 on the boundary that identifies a control, which
+     `--color-line` misses badly at 1.28:1 on paper. It is kept as a separate
+     token rather than darkening `--color-line`, because only five borders in
+     the app are control boundaries and the other thirty-six are dividers,
+     card edges and thumbnail frames, which the criterion exempts and which
+     the design wants to stay hairline.
+     3.25:1 on paper, 3.07:1 on cream. */
+  --color-field: #a08a70;
 
   --color-ink: #2e2622;
   --color-ink-soft: #5c504a;
-  --color-ink-muted: #8a7a70;
+  /* Was #8a7a70, which measured 3.83:1 on cream and 3.36:1 on clay-soft and
+     so failed WCAG 1.4.3 AA (4.5:1) everywhere it was used — and it is the
+     colour of every caption, blurb and footnote in the app, most of them at
+     11 or 12px. This clears 4.5:1 on all three backgrounds it lands on:
+     5.17:1 on cream, 5.48:1 on paper, 4.54:1 on clay-soft. */
+  --color-ink-muted: #766559;
 
   --color-clay: #8c3b3b;
   --color-clay-dark: #72302f;
@@ -27,6 +41,10 @@
     background: var(--color-cream);
     color: var(--color-ink);
     -webkit-text-size-adjust: 100%;
+    /* The site header is `sticky top-0` and 3.5rem tall. Without this, tabbing
+       down the page scrolls a focused control to the very top of the viewport,
+       which is underneath the header: WCAG 2.4.11 wants it visible. */
+    scroll-padding-top: 4.5rem;
   }
 
   body {

@@ -339,17 +339,22 @@ export function PlanClient({
 
       {/* Mobile switches between the list and the map; desktop shows both. */}
       <div className="mx-auto mt-5 max-w-6xl px-4 sm:px-6 lg:hidden">
+        {/* A group of toggle buttons, not a tablist. It used to claim
+            `role="tablist"`/`role="tab"`, which promises the APG keyboard map
+            — arrow keys moving between tabs, roving tabindex — and there was
+            none, nor a `role="tabpanel"` for `aria-selected` to point at. Two
+            plain buttons with `aria-pressed` announce the same state and
+            behave the way they announce. */}
         <div
-          role="tablist"
+          role="group"
           aria-label="Plan view"
           className="border-line bg-paper grid grid-cols-2 gap-1 rounded-full border p-1"
         >
           {(["itinerary", "map"] as const).map((view) => (
             <button
               key={view}
-              role="tab"
               type="button"
-              aria-selected={mobileView === view}
+              aria-pressed={mobileView === view}
               onClick={() => setMobileView(view)}
               className={cx(
                 "rounded-full py-2 text-sm font-medium capitalize transition-colors",
@@ -363,7 +368,18 @@ export function PlanClient({
       </div>
 
       <div className="mx-auto grid max-w-6xl gap-6 px-4 py-5 sm:px-6 lg:grid-cols-[minmax(0,26rem)_1fr] lg:items-start">
-        <div className={cx("space-y-4", mobileView === "map" && "hidden lg:block")}>
+        {/* `min-w-0`, or the page scrolls sideways at 320px. A grid item's
+            `min-width` is `auto`, so this column refuses to shrink below the
+            min-content of an itinerary row — a 24px number, a 64px thumbnail
+            and a `truncate` venue name, whose `white-space: nowrap` reports
+            its full width. The desktop track already guards the same thing
+            with `minmax(0,26rem)`; the single-column mobile case had nothing. */}
+        <div
+          className={cx(
+            "min-w-0 space-y-4",
+            mobileView === "map" && "hidden lg:block",
+          )}
+        >
           <PlanSummary totals={totals} routeSource={route.source} />
 
           <ItineraryPanel

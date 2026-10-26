@@ -135,7 +135,16 @@ export function AddStopDialog({
           <label className="sr-only" htmlFor="add-stop-search">
             Search for a place
           </label>
-          <div className="border-line focus-within:border-clay flex items-center gap-2 rounded-full border px-3 py-2 transition-colors">
+          {/* `border-field`, not `border-line`: the input itself is
+              `bg-transparent`, so this border is the only thing that says
+              there is a field here. */}
+          {/* `border-field`, not `border-line`: the input is `bg-transparent`,
+              so this border is the only thing that says there is a field here.
+              The ring itself is left to the `:focus-visible` rule in
+              `globals.css`, which is why the input no longer sets
+              `outline-none` — a wrapper ring drawn here would be a second way
+              of doing what the whole app already does one way. */}
+          <div className="border-field focus-within:border-clay flex items-center gap-2 rounded-full border px-3 py-2 transition-colors">
             <Search size={15} className="text-ink-muted shrink-0" aria-hidden />
             <input
               id="add-stop-search"
@@ -143,7 +152,7 @@ export function AddStopDialog({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search any place, or pick one below"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+              className="min-w-0 flex-1 bg-transparent text-sm"
             />
             {searching ? (
               <Loader2
@@ -174,7 +183,9 @@ export function AddStopDialog({
               : "Everywhere else is already in this plan. Search to add somewhere new."}
           </p>
         ) : (
-          <ul className="min-h-0 flex-1 overflow-y-auto p-3">
+          // `overscroll-contain`: without it, flicking past the end of the
+          // results keeps going and scrolls the plan behind the sheet.
+          <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
             {local.map((destination) => (
               <PlaceRow
                 key={destination.id}

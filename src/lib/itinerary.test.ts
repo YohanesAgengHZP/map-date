@@ -177,9 +177,14 @@ describe("real-asset data integrity", () => {
   });
 
   it("carries no photo fields or image assets anywhere in the data", () => {
-    // The app has no imagery at all: OpenStreetMap has none for searched
-    // places, so built-in venues do not get any either. Guards against a
-    // photo field creeping back into one entry and not the rest.
+    // No venue imagery: OpenStreetMap has none for searched places, so
+    // built-in venues do not get any either. Guards against a photo field
+    // creeping back into one entry and not the rest.
+    //
+    // The mood illustrations in `public/moods/` are not covered by this and
+    // should not be: they belong to a mood rather than to a venue, so they
+    // live in `MOODS`, not in a destination, and they are the same for
+    // everybody. This asserts over destinations and plans for that reason.
     //
     // Matches field names and asset paths, not the word itself: Mohan Burger
     // genuinely has a photobox in it, and that is a fact about the venue.

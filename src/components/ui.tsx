@@ -69,7 +69,11 @@ export function Button({
     <button
       type={type}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40",
+        // `scale` is named alongside `colors` rather than using
+        // `transition-all`, and the press is excluded while disabled so a dead
+        // button never springs. The reduced-motion rule in `globals.css`
+        // zeroes the duration, which leaves the colour change as the cue.
+        "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-[color,background-color,border-color,scale] duration-150 ease-out enabled:active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-40",
         variant === "primary" &&
           "bg-clay hover:bg-clay-dark text-white shadow-sm",
         variant === "secondary" &&
