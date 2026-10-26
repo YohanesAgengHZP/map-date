@@ -6,7 +6,7 @@ import { formatDuration } from "@/lib/format";
 import { searchPlaces } from "@/lib/places";
 import type { Destination } from "@/lib/types";
 import { CategoryIcon } from "./CategoryIcon";
-import { Button } from "./ui";
+import { Button, cx } from "./ui";
 
 /** Long enough that typing "nanamia" does not fire a request per keystroke. */
 const DEBOUNCE_MS = 350;
@@ -33,7 +33,18 @@ export function AddStopDialog({
   onAdd: (destination: Destination) => void;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
+
+  /**
+   * The name of the last place added, so the sheet can say so.
+   *
+   * The sheet stays open now, and a place that has just been added drops out
+   * of the list, because the plan it is now in is what `options` and
+   * `excludeIds` filter against. A row quietly vanishing is a poor way to
+   * report success, so it is said in words as well.
+   */
+  const [added, setAdded] = useState<string | null>(null);
 
   /**
    * The last answer, tagged with the query it answers.
@@ -103,7 +114,20 @@ export function AddStopDialog({
 
   const close = () => {
     setQuery("");
+    setAdded(null);
     onClose();
+  };
+
+  /**
+   * Focus goes back to the search box, because the button that was just
+   * pressed is about to leave the DOM with its row. Left alone, focus falls to
+   * the body and a keyboard user is dumped out of the sheet they are still
+   * working in. The search box is also where they want to be next.
+   */
+  const add = (destination: Destination) => {
+    onAdd(destination);
+    setAdded(destination.name);
+    inputRef.current?.focus();
   };
 
   return (
@@ -144,9 +168,6 @@ export function AddStopDialog({
           <label className="sr-only" htmlFor="add-stop-search">
             Search for a place
           </label>
-          {/* `border-field`, not `border-line`: the input itself is
-              `bg-transparent`, so this border is the only thing that says
-              there is a field here. */}
           {/* `border-field`, not `border-line`: the input is `bg-transparent`,
               so this border is the only thing that says there is a field here.
 
@@ -154,8 +175,9 @@ export function AddStopDialog({
               input take the global `:focus-visible` ring put a second rounded
               outline *inside* the pill, a ring and a border a couple of pixels
               apart, which read as a cramped double border. On the wrapper it
-              sits outside the pill and matches every other control. */}
-          {/* `outline-[var(--color-clay)]`, not `outline-clay`: the colour
+              sits outside the pill and matches every other control.
+
+              `outline-[var(--color-clay)]`, not `outline-clay`: the colour
               utility generates no `outline-color` in this build, so the ring
               fell back to `currentColor` and came out ink. The same dead class
               sits on the mood tiles in `DiscoverClient`, where it goes
@@ -165,9 +187,15 @@ export function AddStopDialog({
             <Search size={15} className="text-ink-muted shrink-0" aria-hidden />
             <input
               id="add-stop-search"
+              ref={inputRef}
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                // A new search is a new question; the last confirmation has
+                // nothing to do with the list now on screen.
+                setAdded(null);
+              }}
               placeholder="Search any place, or pick one below"
               className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
@@ -179,15 +207,26 @@ export function AddStopDialog({
               />
             ) : null}
           </div>
+          {/* One line, one live region. The confirmation goes through the
+              region that already exists rather than a second one beside it,
+              so a screen reader hears one voice here and the layout does not
+              shift when something is added. Search state outranks it: if a
+              request is in flight, what is happening now matters more than
+              what happened a moment ago. */}
           <p
             role="status"
-            className="text-ink-muted mt-2 text-[11px] leading-tight"
+            className={cx(
+              "mt-2 text-[11px] leading-tight",
+              added && !failed && !searching ? "text-clay" : "text-ink-muted",
+            )}
           >
             {failed
               ? "Could not search just now. Check your connection and try again."
               : searching
                 ? "Looking..."
-                : "Type the name of anywhere you want to go."}
+                : added
+                  ? `Added ${added}. Add another, or close to see the plan.`
+                  : "Type the name of anywhere you want to go."}
           </p>
         </div>
 
@@ -207,7 +246,7 @@ export function AddStopDialog({
               <PlaceRow
                 key={destination.id}
                 destination={destination}
-                onAdd={() => onAdd(destination)}
+                onAdd={() => add(destination)}
               />
             ))}
 
@@ -221,7 +260,7 @@ export function AddStopDialog({
               <PlaceRow
                 key={destination.id}
                 destination={destination}
-                onAdd={() => onAdd(destination)}
+                onAdd={() => add(destination)}
               />
             ))}
           </ul>

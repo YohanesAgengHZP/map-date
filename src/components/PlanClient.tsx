@@ -228,10 +228,16 @@ export function PlanClient({
     if (selectedId === id) setSelectedId(next[0] ?? null);
   };
 
+  /**
+   * Adds and selects, and deliberately does not close anything. Building an
+   * afternoon means adding several places in a row, and the search sheet used
+   * to shut after every single one, so each extra stop cost a reopen and a
+   * retype. Whoever opened a surface closes it: the detail modal dismisses
+   * itself below, and the search sheet stays up until it is dismissed.
+   */
   const addStop = (id: string) => {
     if (!stopIds.includes(id)) commitStops([...stopIds, id]);
     setSelectedId(id);
-    setAddStopOpen(false);
   };
 
   /**
