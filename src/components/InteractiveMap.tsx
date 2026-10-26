@@ -288,10 +288,12 @@ export default function InteractiveMap({
       const to = points[index + 1];
       if (!from || !to) return;
 
+      // `~` rather than "est.", the same mark the summary already uses for a
+      // travel figure that is a guess. The pill is too small for a word.
       const text =
         leg.minutes === null
-          ? "no estimate"
-          : `${formatDuration(leg.minutes)}${leg.source === "estimated" ? " est." : ""}`;
+          ? "no time"
+          : `${leg.source === "estimated" ? "~ " : ""}${formatDuration(leg.minutes)}`;
 
       const element = document.createElement("span");
       element.textContent = text;

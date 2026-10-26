@@ -248,23 +248,28 @@ export function PlanClient({
 
   return (
     <>
-      <section className="relative">
-        {/* The hero was a full-bleed cover photo. It is now the same dark band
-            without one, so the white title, chips and header buttons keep
-            working unchanged. Shorter than the photo version, because a solid
-            colour does not earn 20rem, with the plan's own category icons
-            tiled faintly across it as texture rather than decoration. Four
-            huge icons pushed to the right edge left the middle of the band
-            visibly empty; a tile has no middle. */}
-        <div className="relative h-44 overflow-hidden bg-gradient-to-br from-[#2e2622] to-[#241a16] sm:h-52">
-          <CategoryPattern
-            categories={destinations.map((d) => d.category)}
-            tiles={60}
-            className="text-white/[0.07]"
-          />
-        </div>
+      {/* The hero was a full-bleed cover photo. It is now the same dark band
+          without one, so the white title, chips and header buttons keep
+          working unchanged, with the plan's own category icons tiled faintly
+          across it as texture rather than decoration. Four huge icons pushed
+          to the right edge left the middle of the band visibly empty; a tile
+          has no middle.
 
-        <div className="absolute inset-0 mx-auto flex max-w-6xl flex-col px-4 py-4 sm:px-6">
+          `min-h`, not `h`, and the text sits in the band rather than in an
+          overlay absolutely positioned over it. A fixed 11rem with the content
+          laid on top looked right until a narrow screen: a long title wraps,
+          the Share and Delete buttons drop to their own line, and the whole
+          group overflowed the band and printed itself on the cream below. The
+          band now grows to whatever it holds, and `min-h` keeps the roomy
+          proportions on a wide one. */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#2e2622] to-[#241a16]">
+        <CategoryPattern
+          categories={destinations.map((d) => d.category)}
+          tiles={60}
+          className="text-white/[0.07]"
+        />
+
+        <div className="relative mx-auto flex min-h-44 max-w-6xl flex-col px-4 py-4 sm:min-h-52 sm:px-6">
           <Link
             href="/"
             className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-white/25"
@@ -273,7 +278,10 @@ export function PlanClient({
             Back to plans
           </Link>
 
-          <div className="mt-auto flex flex-wrap items-end justify-between gap-3">
+          {/* `pt-6` as well as `mt-auto`: once the content is tall enough to
+              set the band's height there is no slack left for `auto` to eat,
+              and the title would sit against the back link. */}
+          <div className="mt-auto flex flex-wrap items-end justify-between gap-3 pt-6">
             <div className="min-w-0">
               <h1 className="text-3xl text-white sm:text-4xl">{plan.title}</h1>
               <p className="mt-1 text-sm text-white/80">
@@ -322,9 +330,9 @@ export function PlanClient({
         {unresolvedCount > 0 ? (
           <p className="border-line text-ink-soft mt-4 max-w-2xl rounded-xl border border-dashed p-3 text-xs leading-relaxed">
             {unresolvedCount === 1 ? "One stop" : `${unresolvedCount} stops`} in
-            this plan could not be loaded. Places added from OpenStreetMap are
-            fetched again when the plan is opened, so this usually means the
-            lookup failed or the place is no longer on the map.
+            this plan would not load. Places you searched for are looked up
+            again each time the plan is opened, so either the connection failed
+            or the place is no longer on the map.
           </p>
         ) : null}
       </div>

@@ -46,9 +46,9 @@ export function PlanSummary({
 
       <p className="border-line text-ink-muted border-t px-3 py-2 text-[11px] leading-relaxed">
         {routeSource === "routed"
-          ? "Travel times come from a routing service. About right on a motorbike or an ojek, optimistic on a bike. Walks are marked separately."
+          ? "Travel times are about right on a motorbike or an ojek, optimistic on a bike. Walks are marked separately."
           : routeSource === "estimated"
-            ? "Could not reach the routing service, so these travel times are rough guesses from distance alone."
+            ? "We could not check the roads just now, so these travel times are rough guesses from the distance alone."
             : "No travel times this time, so the total only counts time at the stops."}
       </p>
     </div>
@@ -67,12 +67,20 @@ function Cell({
   className?: string;
 }) {
   return (
-    <div className={`px-3 py-2.5 ${className ?? ""}`}>
-      <dt className="text-ink-muted flex items-center gap-1.5 text-[11px] tracking-wide uppercase">
-        <span className="text-clay">{icon}</span>
+    // A column with the value pushed to the bottom, because the three labels
+    // are not the same length: "Travel between stops" wrapped to three lines
+    // where "Time at stops" took one, and the figures ended up on three
+    // different baselines. Pinning them to the bottom lines them up whatever
+    // the labels do. Sentence case rather than uppercase with letter-spacing,
+    // which is what made the longest label wrap in the first place.
+    <div className={`flex flex-col px-3 py-2.5 ${className ?? ""}`}>
+      <dt className="text-ink-muted flex items-start gap-1.5 text-[11px] leading-tight">
+        <span className="text-clay mt-px shrink-0">{icon}</span>
         {label}
       </dt>
-      <dd className="text-ink mt-0.5 text-sm font-semibold">{children}</dd>
+      <dd className="text-ink mt-auto pt-1.5 text-sm font-semibold">
+        {children}
+      </dd>
     </div>
   );
 }
