@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DESTINATIONS } from "@/data/destinations";
-import { iconFor } from "./CategoryIcon";
+import { iconFor, tintFor } from "./CategoryIcon";
 
 /**
  * The icon is the only thing standing in for a photo, and it is matched by
@@ -45,5 +45,28 @@ describe("iconFor", () => {
     // OSM has thousands of values; most will never be in the table.
     expect(iconFor("")).toBeDefined();
     expect(iconFor("nuclear reprocessing plant")).toBeDefined();
+  });
+});
+
+/**
+ * The tint is the only thing that keeps a list of search results from reading
+ * as a column of failed images, so it has to move with the icon: same family,
+ * same tile; different family, different tile.
+ */
+describe("tintFor", () => {
+  it("gives a tint wherever it gives an icon, and the two agree", () => {
+    for (const destination of DESTINATIONS) {
+      expect(tintFor(destination.category)).not.toBe(
+        tintFor("something unmatchable"),
+      );
+    }
+    expect(tintFor("Pizzeria")).toBe(tintFor("Batak restaurant"));
+    expect(tintFor("Cafe")).not.toBe(tintFor("Park"));
+  });
+
+  it("carries a background and a foreground, or the icon is invisible", () => {
+    for (const category of ["Cafe", "Museum", "Park", "unmatchable"]) {
+      expect(tintFor(category)).toMatch(/bg-\S+\s+text-\S+/);
+    }
   });
 });

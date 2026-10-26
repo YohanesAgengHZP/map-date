@@ -108,8 +108,15 @@ properly for the few that have it, which is not enough to build a UI on.
 
 Places show a category icon instead (`CategoryIcon`), matched by regex from the
 category string so a hand-written venue and something found seconds ago render
-identically. `itinerary.test.ts` asserts no photo field or `.webp` path ever
-comes back.
+identically. The tile is tinted per category family — a coffee tile is amber, a
+park green, a museum stone — because one flat tint for everything made a page of
+search results read as a column of photos that had failed to load.
+`itinerary.test.ts` asserts no photo field or `.webp` path ever comes back.
+
+The boxes the photos used to fill — the card cover, the plan header, the home
+hero — tile those same icons instead (`CategoryPattern`), derived from the
+plan's own stops. A few icons centred in a photo-shaped box left most of the
+box empty, which reads as a failed image; a tile has no middle.
 
 The original PNGs are still in `design/assets/<folder>/`, unused by the app and
 not shipped. The served WebP copies and the Pillow script that produced them

@@ -5,7 +5,7 @@ import { calculateTotals } from "@/lib/itinerary";
 import { estimateRoute } from "@/lib/routing";
 import { formatDurationBand } from "@/lib/format";
 import type { Plan } from "@/lib/types";
-import { iconFor } from "./CategoryIcon";
+import { CategoryPattern, iconFor } from "./CategoryIcon";
 import { Chip } from "./ui";
 
 /**
@@ -35,8 +35,19 @@ export function PlanCard({
           icons, derived from the stops: it changes as the plan does, and it
           says at a glance whether this is three restaurants or a museum and a
           park. Shallower than the old 4:3 photo, because an icon row does not
-          need the height and the text below is now the thing worth reading. */}
-      <div className="bg-clay-soft/50 border-line relative flex aspect-[5/2] items-center justify-center gap-4 border-b">
+          need the height and the text below is now the thing worth reading.
+
+          The same icons tile faintly behind it, because five of them centred
+          in a 5:2 box left most of the box empty — worst on a plan with no
+          stops yet, which was a single pin in a pink field. The row stays at
+          full strength so it is still the thing being read. */}
+      <div className="bg-clay-soft/50 border-line relative flex aspect-[5/2] items-center justify-center gap-4 overflow-hidden border-b">
+        <CategoryPattern
+          categories={destinations.map((d) => d.category)}
+          tiles={24}
+          className="text-clay/15"
+        />
+
         {destinations.slice(0, 5).map((destination, index) => {
           const Icon = iconFor(destination.category);
           return (
@@ -45,12 +56,18 @@ export function PlanCard({
               size={28}
               strokeWidth={1.25}
               aria-hidden
-              className="text-clay transition-transform duration-500 group-hover:-translate-y-0.5"
+              // `relative`, or the absolutely positioned pattern paints over it.
+              className="text-clay relative transition-transform duration-500 group-hover:-translate-y-0.5"
             />
           );
         })}
         {destinations.length === 0 ? (
-          <MapPin size={26} strokeWidth={1.25} aria-hidden className="text-clay/40" />
+          <MapPin
+            size={26}
+            strokeWidth={1.25}
+            aria-hidden
+            className="text-clay/40 relative"
+          />
         ) : null}
 
         <div className="absolute inset-x-0 bottom-0 flex gap-2 p-3">

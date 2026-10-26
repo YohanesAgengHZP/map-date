@@ -33,7 +33,7 @@ import { AddStopDialog } from "./AddStopDialog";
 import { DestinationDetailModal } from "./DestinationDetailModal";
 import { ItineraryPanel } from "./ItineraryPanel";
 import { PlanSummary } from "./PlanSummary";
-import { iconFor } from "./CategoryIcon";
+import { CategoryPattern } from "./CategoryIcon";
 import { Chip, SampleNote, cx } from "./ui";
 
 // MapLibre GL touches `window` at import time, so the map never server-renders.
@@ -252,25 +252,16 @@ export function PlanClient({
         {/* The hero was a full-bleed cover photo. It is now the same dark band
             without one, so the white title, chips and header buttons keep
             working unchanged. Shorter than the photo version, because a solid
-            colour does not earn 20rem, with the plan's own category icons set
-            faintly into the right as texture rather than decoration. */}
+            colour does not earn 20rem, with the plan's own category icons
+            tiled faintly across it as texture rather than decoration. Four
+            huge icons pushed to the right edge left the middle of the band
+            visibly empty; a tile has no middle. */}
         <div className="relative h-44 overflow-hidden bg-gradient-to-br from-[#2e2622] to-[#241a16] sm:h-52">
-          <div
-            aria-hidden
-            className="absolute inset-y-0 right-0 flex items-center gap-6 pr-6 opacity-[0.09] sm:gap-10 sm:pr-10"
-          >
-            {destinations.slice(0, 4).map((destination, index) => {
-              const Icon = iconFor(destination.category);
-              return (
-                <Icon
-                  key={`${destination.id}-${index}`}
-                  size={88}
-                  strokeWidth={0.75}
-                  className="text-white"
-                />
-              );
-            })}
-          </div>
+          <CategoryPattern
+            categories={destinations.map((d) => d.category)}
+            tiles={60}
+            className="text-white/[0.07]"
+          />
         </div>
 
         <div className="absolute inset-0 mx-auto flex max-w-6xl flex-col px-4 py-4 sm:px-6">

@@ -9,6 +9,7 @@ import { calculateTotals } from "@/lib/itinerary";
 import { createMyPlan, toPlan, useMyPlans } from "@/lib/myPlans";
 import { estimateRoute } from "@/lib/routing";
 import type { Mood } from "@/lib/types";
+import { CategoryPattern } from "./CategoryIcon";
 import { CreatePlanDialog } from "./CreatePlanDialog";
 import { PlanCard } from "./PlanCard";
 import { Button, cx } from "./ui";
@@ -29,6 +30,23 @@ export type PlanEntry = {
 };
 
 type TimeId = (typeof TIME_FILTERS)[number]["id"];
+
+/**
+ * What the hero tiles with. Written out rather than derived from the cards
+ * below it: the built-in ones arrive pre-rendered as `ReactNode`, so their
+ * categories are not reachable here, and this panel is about the app rather
+ * than about any one plan anyway. It only has to look like an afternoon out.
+ */
+const HERO_CATEGORIES = [
+  "Cafe",
+  "Museum",
+  "Park",
+  "Restaurant",
+  "Attraction",
+  "Gallery",
+  "Market",
+  "Zoo",
+];
 
 export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
   const [mood, setMood] = useState<Mood | "any">("any");
@@ -101,10 +119,19 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
         {/* Was a photo with the copy laid over it, which is why this used to
             be an aspect-ratio box with an absolutely positioned overlay. With
             no photograph there is nothing to size to, so the panel simply
-            wraps its own content: no fixed ratio, no overlay, and no empty
-            right-hand third at desktop widths. */}
-        <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-[#2e2622] to-[#241a16]">
-          <div className="flex flex-col p-6 sm:p-10 lg:p-12">
+            wraps its own content: no fixed ratio and no overlay.
+
+            The copy is a column and the filter bar stops at `max-w-2xl`, so a
+            6xl panel still left its right-hand half bare dark brown. The tile
+            fills it, faded out from the left so it never sits behind the
+            heading. */}
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#2e2622] to-[#241a16]">
+          <CategoryPattern
+            categories={HERO_CATEGORIES}
+            tiles={60}
+            className="text-white/[0.06] [mask-image:linear-gradient(to_right,transparent_30%,black_85%)]"
+          />
+          <div className="relative flex flex-col p-6 sm:p-10 lg:p-12">
             <div className="max-w-md">
               <h1 className="text-3xl leading-[1.1] text-white sm:text-4xl lg:text-5xl">
                 So, where
