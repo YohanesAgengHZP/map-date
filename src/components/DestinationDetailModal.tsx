@@ -63,7 +63,9 @@ export function DestinationDetailModal({
         if (event.target === ref.current) onClose();
       }}
       className={cx(
-        "bg-paper text-ink m-0 w-screen max-w-none p-0 backdrop:bg-[#241a16]/60",
+        // `open:flex`, not `flex`: a bare `display:flex` would beat the UA's
+        // `dialog:not([open]) { display: none }` and show the card while closed.
+        "bg-paper text-ink m-0 w-screen max-w-none p-0 backdrop:bg-[#241a16]/60 open:flex open:flex-col",
         // Mobile: full-height sheet pinned to the bottom. Desktop: centred card
         // that only grows to fit. Scoped with `max-sm:` so the two height rules
         // never both apply. A plain `h-*` plus `sm:h-auto` pair loses to source order.
@@ -74,7 +76,11 @@ export function DestinationDetailModal({
       )}
     >
       {destination ? (
-        <div className="flex h-full flex-col">
+        // `min-h-0 flex-1`, not `h-full`: at `sm` and up the dialog is capped
+        // by `max-h` and has no definite height, so a percentage height here
+        // resolved to `auto` and the scrollable body never got a height to
+        // overflow. Same bug the stop search had.
+        <div className="flex min-h-0 flex-1 flex-col">
           <div className="border-line bg-paper sticky top-0 z-10 flex items-start gap-3 border-b px-4 py-3 sm:px-6">
             {/* Small, beside the title, rather than a panel of its own: one
                 icon does not fill a column, and the name is what the eye

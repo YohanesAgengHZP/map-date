@@ -114,9 +114,18 @@ export function AddStopDialog({
       onClick={(event) => {
         if (event.target === ref.current) close();
       }}
-      className="bg-paper text-ink m-0 w-screen max-w-none p-0 backdrop:bg-[#241a16]/60 max-sm:mt-auto max-sm:h-[80dvh] max-sm:rounded-t-3xl sm:m-auto sm:max-h-[85dvh] sm:w-[min(32rem,94vw)] sm:rounded-2xl"
+      /* `open:flex`, not `flex`: a bare `display:flex` would beat the UA's
+         `dialog:not([open]) { display: none }` and leave the sheet on screen
+         while closed. */
+      className="bg-paper text-ink m-0 w-screen max-w-none p-0 backdrop:bg-[#241a16]/60 open:flex open:flex-col max-sm:mt-auto max-sm:h-[80dvh] max-sm:rounded-t-3xl sm:m-auto sm:max-h-[85dvh] sm:w-[min(32rem,94vw)] sm:rounded-2xl"
     >
-      <div className="flex h-full flex-col">
+      {/* `min-h-0 flex-1`, not `h-full`. At `sm` and up the dialog is capped
+          by `max-h` with no definite height of its own, so a percentage height
+          here resolved to `auto`: the column grew to fit every result, the
+          list was never given a height to overflow, and `overflow-y-auto` had
+          nothing to do. The results ran past the bottom edge and could not be
+          scrolled to. Mobile escaped it only because `h-[80dvh]` is definite. */}
+      <div className="flex min-h-0 flex-1 flex-col">
         <div className="border-line flex items-center gap-3 border-b px-4 py-3">
           <h2 id="add-stop-title" className="flex-1 text-lg">
             Add a stop
@@ -140,11 +149,19 @@ export function AddStopDialog({
               there is a field here. */}
           {/* `border-field`, not `border-line`: the input is `bg-transparent`,
               so this border is the only thing that says there is a field here.
-              The ring itself is left to the `:focus-visible` rule in
-              `globals.css`, which is why the input no longer sets
-              `outline-none` — a wrapper ring drawn here would be a second way
-              of doing what the whole app already does one way. */}
-          <div className="border-field focus-within:border-clay flex items-center gap-2 rounded-full border px-3 py-2 transition-colors">
+
+              The ring is drawn here rather than on the input. Letting the
+              input take the global `:focus-visible` ring put a second rounded
+              outline *inside* the pill, a ring and a border a couple of pixels
+              apart, which read as a cramped double border. On the wrapper it
+              sits outside the pill and matches every other control. */}
+          {/* `outline-[var(--color-clay)]`, not `outline-clay`: the colour
+              utility generates no `outline-color` in this build, so the ring
+              fell back to `currentColor` and came out ink. The same dead class
+              sits on the mood tiles in `DiscoverClient`, where it goes
+              unnoticed because the `:focus-visible` rule in `globals.css` is
+              hand-written CSS and paints them clay anyway. */}
+          <div className="border-field focus-within:border-clay focus-within:outline-[var(--color-clay)] flex items-center gap-2 rounded-full border px-3 py-2 transition-colors focus-within:outline-2 focus-within:outline-offset-2">
             <Search size={15} className="text-ink-muted shrink-0" aria-hidden />
             <input
               id="add-stop-search"
@@ -152,7 +169,7 @@ export function AddStopDialog({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search any place, or pick one below"
-              className="min-w-0 flex-1 bg-transparent text-sm"
+              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
             />
             {searching ? (
               <Loader2
