@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   Clock,
   Heart,
@@ -12,9 +12,14 @@ import {
   X,
 } from "lucide-react";
 import { formatDuration } from "@/lib/format";
+import { useLocalStore } from "@/lib/useLocalStore";
+import {
+  DURATION_PRESETS,
+  setVisitDuration,
+  visitDurationsStore,
+} from "@/lib/visitDurations";
 import type { Destination } from "@/lib/types";
-import { DestinationGallery } from "./DestinationGallery";
-import { PhotoLightbox } from "./PhotoLightbox";
+import { CategoryIcon } from "./CategoryIcon";
 import { Button, Chip, Stat, cx } from "./ui";
 
 /**
@@ -40,8 +45,6 @@ export function DestinationDetailModal({
   inItinerary: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [photoIndex, setPhotoIndex] = useState(0);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -50,20 +53,8 @@ export function DestinationDetailModal({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  // A different destination starts from its first photo. Adjusted during
-  // render rather than in an effect so the modal never paints the previous
-  // destination's photo index for a frame.
-  const [shownId, setShownId] = useState(destination?.id);
-  if (destination?.id !== shownId) {
-    setShownId(destination?.id);
-    setPhotoIndex(0);
-    setLightboxOpen(false);
-  }
-
-  const photos = destination?.photos ?? [];
 
   return (
-    <>
     <dialog
       ref={ref}
       aria-labelledby="destination-modal-title"
@@ -71,25 +62,26 @@ export function DestinationDetailModal({
       onClick={(event) => {
         if (event.target === ref.current) onClose();
       }}
-      onKeyDown={(event) => {
-        if (lightboxOpen || photos.length < 2) return;
-        if (event.key === "ArrowRight")
-          setPhotoIndex((i) => (i + 1) % photos.length);
-        if (event.key === "ArrowLeft")
-          setPhotoIndex((i) => (i - 1 + photos.length) % photos.length);
-      }}
       className={cx(
         "bg-paper text-ink m-0 w-screen max-w-none p-0 backdrop:bg-[#241a16]/60",
         // Mobile: full-height sheet pinned to the bottom. Desktop: centred card
         // that only grows to fit. Scoped with `max-sm:` so the two height rules
         // never both apply. A plain `h-*` plus `sm:h-auto` pair loses to source order.
         "max-sm:mt-auto max-sm:h-[94dvh] max-sm:rounded-t-3xl",
-        "sm:m-auto sm:max-h-[90dvh] sm:w-[min(62rem,94vw)] sm:rounded-2xl",
+        // 62rem wide when a photo gallery sat beside the facts; without one
+        // the text is all there is, so the card narrows to fit it.
+        "sm:m-auto sm:max-h-[90dvh] sm:w-[min(34rem,94vw)] sm:rounded-2xl",
       )}
     >
       {destination ? (
         <div className="flex h-full flex-col">
           <div className="border-line bg-paper sticky top-0 z-10 flex items-start gap-3 border-b px-4 py-3 sm:px-6">
+            {/* Small, beside the title, rather than a panel of its own: one
+                icon does not fill a column, and the name is what the eye
+                comes here for anyway. */}
+            <span className="border-line mt-0.5 size-10 shrink-0 overflow-hidden rounded-lg border">
+              <CategoryIcon category={destination.category} size={18} />
+            </span>
             <div className="min-w-0 flex-1">
               <h2 id="destination-modal-title" className="truncate text-xl">
                 {destination.name}
@@ -134,16 +126,7 @@ export function DestinationDetailModal({
             </button>
           </div>
 
-          <div className="grid min-h-0 flex-1 gap-5 overflow-y-auto p-4 sm:p-6 lg:grid-cols-[1.25fr_1fr]">
-            <DestinationGallery
-              photos={photos}
-              index={photoIndex}
-              onIndexChange={setPhotoIndex}
-              onExpand={photos.length > 0 ? () => setLightboxOpen(true) : undefined}
-              destinationName={destination.name}
-              priority
-            />
-
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             <div className="space-y-4">
               {destination.rating !== undefined ? (
                 <p className="text-ink-soft flex items-center gap-1.5 text-sm">
@@ -177,10 +160,14 @@ export function DestinationDetailModal({
                   )}
                 </Stat>
                 <Stat icon={<Timer size={15} />} label="How long to stay">
-                  {formatDuration(destination.visitDurationMinutes)}
+                  <VisitDurationPicker destination={destination} />
                 </Stat>
                 <Stat icon={<MapPin size={15} />} label="Address">
-                  {destination.address}
+                  {/* A place found through search has only the address tags
+                      OpenStreetMap happens to carry, which is often none. */}
+                  {destination.address || (
+                    <span className="text-ink-muted">Not listed anywhere</span>
+                  )}
                   {destination.locationPrecision === "approximate" ? (
                     <span className="text-ink-muted mt-0.5 block text-xs">
                       Rough pin. This one is not mapped exactly, so check
@@ -228,17 +215,61 @@ export function DestinationDetailModal({
         </div>
       ) : null}
     </dialog>
+  );
+}
 
-    {/* A sibling, not a child: nesting one `<dialog>` inside another makes a
-        single Escape dismiss both instead of just the topmost. */}
-    <PhotoLightbox
-      open={lightboxOpen && destination !== undefined}
-      photos={photos}
-      index={Math.min(photoIndex, Math.max(0, photos.length - 1))}
-      onIndexChange={setPhotoIndex}
-      onClose={() => setLightboxOpen(false)}
-      title={destination?.name ?? ""}
-    />
-    </>
+/**
+ * The only editable field in here, because it is the only one the app made up.
+ * Everything else came from a source; this came from a lookup table keyed on
+ * category, and it is what every arrival time in the plan is built on.
+ *
+ * A native `<select>` rather than a number input: the useful answers are a
+ * short list, it needs no validation, and it is keyboard and screen-reader
+ * sane with no library.
+ */
+function VisitDurationPicker({ destination }: { destination: Destination }) {
+  const overrides = useLocalStore(visitDurationsStore);
+  const published = destination.visitDurationMinutes;
+  const current = overrides[destination.id] ?? published;
+  const edited = current !== published;
+
+  // The published figure is always offered, even when it is not a preset:
+  // several built-in venues sit at 75 minutes, and dropping back to the
+  // original has to stay reachable.
+  const options = [...new Set([...DURATION_PRESETS, published, current])].sort(
+    (a, b) => a - b,
+  );
+
+  return (
+    <span className="flex flex-wrap items-center gap-2">
+      <label className="sr-only" htmlFor="visit-duration">
+        How long to stay at {destination.name}
+      </label>
+      <select
+        id="visit-duration"
+        value={current}
+        onChange={(event) => {
+          const minutes = Number(event.target.value);
+          setVisitDuration(destination.id, minutes === published ? null : minutes);
+        }}
+        className="border-line focus-visible:outline-clay cursor-pointer rounded-lg border bg-transparent px-2 py-1 text-sm"
+      >
+        {options.map((minutes) => (
+          <option key={minutes} value={minutes}>
+            {formatDuration(minutes)}
+          </option>
+        ))}
+      </select>
+
+      {edited ? (
+        <button
+          type="button"
+          onClick={() => setVisitDuration(destination.id, null)}
+          className="text-ink-muted hover:text-clay text-xs underline underline-offset-2"
+        >
+          Reset to {formatDuration(published)}
+        </button>
+      ) : null}
+    </span>
   );
 }

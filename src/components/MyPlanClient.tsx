@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
 import { BookmarkPlus, Trash2 } from "lucide-react";
+import { customPlacesStore } from "@/lib/customPlaces";
 import { createMyPlan, decodePlan, toPlan, useMyPlans } from "@/lib/myPlans";
+import { useLocalStore } from "@/lib/useLocalStore";
 import { PlanClient } from "./PlanClient";
 import { ShareButton } from "./ShareButton";
 import { Button } from "./ui";
@@ -26,14 +28,28 @@ export function MyPlanClient() {
   const id = params.get("id");
   const token = params.get("plan");
   const { plans, add, remove, setStops } = useMyPlans();
+
+  // Subscribed for the re-render alone. `toPlan` derives the summary line from
+  // the stops, so a shared plan whose live places land a moment later would
+  // otherwise keep describing only the stops that resolved on first paint,
+  // while the header already counts all of them.
+  useLocalStore(customPlacesStore);
   const [deleting, setDeleting] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const shared = useMemo(() => {
-    if (!token) return null;
-    const decoded = decodePlan(token);
-    return decoded ? createMyPlan(decoded) : null;
-  }, [token]);
+  const decoded = useMemo(() => (token ? decodePlan(token) : null), [token]);
+  const shared = useMemo(
+    () => (decoded ? createMyPlan(decoded) : null),
+    [decoded],
+  );
+
+  /**
+   * Records the link carried for stops that have no entry in the repo. Handed
+   * to `PlanClient`, which seeds them before it decides what needs looking up.
+   * Caching a place is not saving the plan: the plan itself is still only
+   * written when the reader presses "Save to my plans".
+   */
+  const seedPlaces = decoded?.places;
 
   const saved = plans.find((p) => p.id === id);
 
@@ -75,6 +91,7 @@ export function MyPlanClient() {
       <PlanClient
         key={shared.id}
         plan={{ ...toPlan(shared), tags: ["Shared with you"] }}
+        seedPlaces={seedPlaces}
         headerAction={
           <div className="flex shrink-0 flex-wrap gap-2">
             <ShareButton

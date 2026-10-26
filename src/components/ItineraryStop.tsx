@@ -3,7 +3,7 @@
 import { ArrowDown, ArrowUp, Footprints, Navigation, Trash2 } from "lucide-react";
 import { formatClock, formatDistance, formatDuration } from "@/lib/format";
 import type { ItineraryStop as Stop } from "@/lib/types";
-import { SafeImage } from "./SafeImage";
+import { CategoryIcon } from "./CategoryIcon";
 import { cx } from "./ui";
 
 export function ItineraryStop({
@@ -58,13 +58,8 @@ export function ItineraryStop({
             {order}
           </span>
 
-          <span className="border-line relative size-16 shrink-0 overflow-hidden rounded-lg border">
-            <SafeImage
-              src={destination.photos[0]?.url}
-              alt={destination.photos[0]?.alt ?? destination.name}
-              sizes="64px"
-              fallbackLabel="No photo"
-            />
+          <span className="border-line size-16 shrink-0 overflow-hidden rounded-lg border">
+            <CategoryIcon category={destination.category} size={22} />
           </span>
 
           <span className="min-w-0 flex-1">

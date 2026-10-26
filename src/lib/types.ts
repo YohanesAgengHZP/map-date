@@ -1,15 +1,15 @@
 export type Mood = "cozy" | "heritage" | "outdoorsy" | "foodie" | "artsy";
 
-export type Photo = {
-  id: string;
-  url: string;
-  alt: string;
-  caption?: string;
-};
-
 /**
  * Deliberately carries no pricing: the product is about where to go and when,
  * and an afternoon out should not read like a quote. Cost is left to the venue.
+ *
+ * Deliberately carries no photos either. Places are searched out of
+ * OpenStreetMap, which has no venue imagery worth the name: of 934 named Jogja
+ * POIs, 13 carried any image tag, and bars, parks and attractions had none at
+ * all. Keeping photos for the twenty hand-written venues would have meant
+ * every place you added yourself looking broken beside them. The app is text
+ * and a category icon instead. See `CategoryIcon`.
  */
 export type Destination = {
   id: string;
@@ -19,7 +19,6 @@ export type Destination = {
   latitude: number;
   longitude: number;
   address: string;
-  photos: Photo[];
   visitDurationMinutes: number;
   /**
    * How well the coordinate is known. "approximate" means the pin is only
@@ -41,7 +40,6 @@ export type Plan = {
   id: string;
   title: string;
   description: string;
-  coverPhoto: Photo;
   /** Primary mood, used by the Discover filter. `tags` carries the rest. */
   mood: Mood;
   destinationIds: string[];

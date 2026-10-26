@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   Clock,
@@ -11,21 +11,29 @@ import {
   Navigation,
   Route,
 } from "lucide-react";
-import { DESTINATIONS, getDestinations } from "@/data/destinations";
+import {
+  DESTINATIONS,
+  getDestination,
+  getDestinations,
+} from "@/data/destinations";
+import { addCustomPlace, customPlacesStore } from "@/lib/customPlaces";
 import {
   formatDistance,
   formatDuration,
   formatDurationBand,
 } from "@/lib/format";
 import { buildItinerary, calculateTotals, moveItem } from "@/lib/itinerary";
+import { lookupPlaces } from "@/lib/places";
 import { buildDirectionsUrl, estimateRoute, getRoute } from "@/lib/routing";
 import { useFavorites } from "@/lib/useFavorites";
-import type { Plan, RouteResult } from "@/lib/types";
+import { useLocalStore } from "@/lib/useLocalStore";
+import { visitDurationsStore, withVisitDurations } from "@/lib/visitDurations";
+import type { Destination, Plan, RouteResult } from "@/lib/types";
 import { AddStopDialog } from "./AddStopDialog";
 import { DestinationDetailModal } from "./DestinationDetailModal";
 import { ItineraryPanel } from "./ItineraryPanel";
 import { PlanSummary } from "./PlanSummary";
-import { SafeImage } from "./SafeImage";
+import { CategoryPattern } from "./CategoryIcon";
 import { Chip, SampleNote, cx } from "./ui";
 
 // MapLibre GL touches `window` at import time, so the map never server-renders.
@@ -43,6 +51,7 @@ export function PlanClient({
   plan,
   onStopsChange,
   owned = false,
+  seedPlaces,
   headerAction,
 }: {
   plan: Plan;
@@ -54,6 +63,12 @@ export function PlanClient({
    * scratch copy of what ships in `plans.ts` rather than something saved.
    */
   owned?: boolean;
+  /**
+   * Records for stops that cannot be resolved from the repo, handed over by
+   * whoever built the plan. A shared link carries these so its stops render
+   * without a lookup.
+   */
+  seedPlaces?: Destination[];
   /** Slot in the hero for "Save as my plan" or "Delete this plan". */
   headerAction?: ReactNode;
 }) {
@@ -65,8 +80,83 @@ export function PlanClient({
   const [addStopOpen, setAddStopOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"itinerary" | "map">("itinerary");
   const { isFavorite, toggle } = useFavorites();
+  const customPlaces = useLocalStore(customPlacesStore);
+  const durations = useLocalStore(visitDurationsStore);
 
-  const destinations = useMemo(() => getDestinations(stopIds), [stopIds]);
+  // `customPlaces` is in the deps because `getDestinations` reads the live-place
+  // cache internally, which the lint rule cannot see. Dropping it, as the rule
+  // suggests, leaves this memo stale when a shared plan's stops arrive from
+  // Overpass a moment after first paint.
+  //
+  // Durations are applied here rather than inside `getDestination` so the
+  // server-rendered Discover cards cannot disagree with the client about how
+  // long a plan takes. Editing one is a thing you do on this page.
+  const destinations = useMemo(
+    () => withVisitDurations(getDestinations(stopIds), durations),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stopIds, customPlaces, durations],
+  );
+
+  /**
+   * Seed first, and from inside this component rather than its parent.
+   * Effects run child-before-parent across the tree but in declaration order
+   * within one component, so seeding here is the only placement that is
+   * guaranteed to happen before the lookup below decides what is missing.
+   * Seeding from the parent fired a real Overpass request every time.
+   */
+  useEffect(() => {
+    for (const place of seedPlaces ?? []) addCustomPlace(place);
+  }, [seedPlaces]);
+
+  /**
+   * Stops this browser has never seen, which is what a shared link looks like
+   * when it names a place the reader did not search for themselves. Every live
+   * id is an OSM object id, so it can be fetched back.
+   *
+   * `attempted` stops a plan whose stops OSM has since deleted from being
+   * asked for again on every edit: those ids stay missing no matter how often
+   * we ask. It is marked on settle, never up front, because a run that gets
+   * torn down answered nothing. Marking early means StrictMode's remount
+   * aborts the only request and the retry finds nothing left to ask for.
+   */
+  const attempted = useRef(new Set<string>());
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    const missing = stopIds.filter(
+      (id) => !getDestination(id) && !attempted.current.has(id),
+    );
+    if (missing.length === 0) return;
+
+    let active = true;
+    const controller = new AbortController();
+    setResolving(true);
+
+    lookupPlaces(missing, controller.signal)
+      .then((found) => {
+        for (const place of found) addCustomPlace(place);
+      })
+      .catch((error: unknown) => {
+        if (active) console.error("Could not resolve shared stops", error);
+      })
+      .finally(() => {
+        if (!active) return;
+        for (const id of missing) attempted.current.add(id);
+        setResolving(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [stopIds]);
+
+  /**
+   * Stops the plan names that nothing could resolve. Said out loud rather than
+   * dropped quietly: a shared plan that renders four of its five stops with no
+   * explanation looks like the sender's plan, not like a failure.
+   */
+  const unresolvedCount = resolving ? 0 : stopIds.length - destinations.length;
 
   // Start from the offline estimate so the first paint has real numbers, then
   // replace it with the routed answer when the provider responds.
@@ -103,8 +193,17 @@ export function PlanClient({
   );
 
   const totalMeters = route.legs.reduce((sum, leg) => sum + (leg.meters ?? 0), 0);
-  const detailDestination = DESTINATIONS.find((d) => d.id === detailId);
-  const addOptions = DESTINATIONS.filter((d) => !stopIds.includes(d.id));
+  const detailDestination = detailId ? getDestination(detailId) : undefined;
+
+  // Built-ins plus everywhere the user has already searched out, so a place
+  // added to one plan is one tap away in the next without searching again.
+  const addOptions = useMemo(
+    () =>
+      [...DESTINATIONS, ...customPlaces].filter(
+        (d) => !stopIds.includes(d.id),
+      ),
+    [customPlaces, stopIds],
+  );
 
   const selectStop = (id: string) => setSelectedId(id);
 
@@ -135,19 +234,34 @@ export function PlanClient({
     setAddStopOpen(false);
   };
 
+  /**
+   * Adding from search caches the whole record first. A plan stores only ids,
+   * and a live place has no entry in `destinations.ts` to resolve an id
+   * against, so skipping the cache would add a stop that cannot be rendered.
+   */
+  const addPlace = (place: Destination) => {
+    if (!getDestination(place.id)) addCustomPlace(place);
+    addStop(place.id);
+  };
+
   const directionsUrl = buildDirectionsUrl(destinations);
 
   return (
     <>
       <section className="relative">
-        <div className="relative h-56 sm:h-72 lg:h-80">
-          <SafeImage
-            src={plan.coverPhoto.url}
-            alt={plan.coverPhoto.alt}
-            sizes="100vw"
-            priority
+        {/* The hero was a full-bleed cover photo. It is now the same dark band
+            without one, so the white title, chips and header buttons keep
+            working unchanged. Shorter than the photo version, because a solid
+            colour does not earn 20rem, with the plan's own category icons
+            tiled faintly across it as texture rather than decoration. Four
+            huge icons pushed to the right edge left the middle of the band
+            visibly empty; a tile has no middle. */}
+        <div className="relative h-44 overflow-hidden bg-gradient-to-br from-[#2e2622] to-[#241a16] sm:h-52">
+          <CategoryPattern
+            categories={destinations.map((d) => d.category)}
+            tiles={60}
+            className="text-white/[0.07]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#241a16]/85 via-[#241a16]/35 to-[#241a16]/25" />
         </div>
 
         <div className="absolute inset-0 mx-auto flex max-w-6xl flex-col px-4 py-4 sm:px-6">
@@ -204,6 +318,15 @@ export function PlanClient({
         <p className="text-ink-soft mt-4 max-w-2xl text-sm leading-relaxed">
           {plan.description}
         </p>
+
+        {unresolvedCount > 0 ? (
+          <p className="border-line text-ink-soft mt-4 max-w-2xl rounded-xl border border-dashed p-3 text-xs leading-relaxed">
+            {unresolvedCount === 1 ? "One stop" : `${unresolvedCount} stops`} in
+            this plan could not be loaded. Places added from OpenStreetMap are
+            fetched again when the plan is opened, so this usually means the
+            lookup failed or the place is no longer on the map.
+          </p>
+        ) : null}
       </div>
 
       {/* Mobile switches between the list and the map; desktop shows both. */}
@@ -310,8 +433,9 @@ export function PlanClient({
       <AddStopDialog
         open={addStopOpen}
         options={addOptions}
+        excludeIds={stopIds}
         onClose={() => setAddStopOpen(false)}
-        onAdd={addStop}
+        onAdd={addPlace}
       />
     </>
   );

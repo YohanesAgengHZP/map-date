@@ -1,7 +1,3 @@
-"use client";
-
-import { useSyncExternalStore } from "react";
-
 /**
  * A JSON value in localStorage, exposed as an external store.
  *
@@ -9,6 +5,13 @@ import { useSyncExternalStore } from "react";
  * value: two `useState` copies of the same key drift the moment one of them
  * writes. This is the shape `useFavorites` worked out; it is factored out here
  * because saved plans need exactly the same behaviour.
+ *
+ * Deliberately React-free, and so deliberately not a `"use client"` module.
+ * `createLocalStore` is a plain closure and `read()` already answers with the
+ * fallback when `window` is missing, so a store can be read during server
+ * render. That is what lets `getDestination` stay synchronous while also seeing
+ * places the user searched for: a client-only module cannot be called from a
+ * server component at all. The React binding lives in `useLocalStore.ts`.
  *
  * ponytail: no account system in scope. Swap `read`/`write` for API calls if
  * sign-in ever lands, and every consumer keeps working.
@@ -81,8 +84,4 @@ export function createLocalStore<T>(
   }
 
   return { read, write, subscribe, serverSnapshot: () => fallback };
-}
-
-export function useLocalStore<T>(store: LocalStore<T>): T {
-  return useSyncExternalStore(store.subscribe, store.read, store.serverSnapshot);
 }

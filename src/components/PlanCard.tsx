@@ -5,7 +5,7 @@ import { calculateTotals } from "@/lib/itinerary";
 import { estimateRoute } from "@/lib/routing";
 import { formatDurationBand } from "@/lib/format";
 import type { Plan } from "@/lib/types";
-import { SafeImage } from "./SafeImage";
+import { CategoryPattern, iconFor } from "./CategoryIcon";
 import { Chip } from "./ui";
 
 /**
@@ -15,11 +15,9 @@ import { Chip } from "./ui";
  */
 export function PlanCard({
   plan,
-  priority,
   href,
 }: {
   plan: Plan;
-  priority?: boolean;
   /** Plans the user made live at `/mine?id=`, not `/plan/[id]`. */
   href?: string;
 }) {
@@ -33,20 +31,51 @@ export function PlanCard({
       href={href ?? `/plan/${plan.id}`}
       className="group border-line bg-paper focus-visible:outline-clay block overflow-hidden rounded-2xl border transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(46,38,34,0.25)]"
     >
-      <div className="relative aspect-[4/3] overflow-hidden">
-        <SafeImage
-          src={plan.coverPhoto.url}
-          alt={plan.coverPhoto.alt}
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          priority={priority}
-          className="transition-transform duration-500 group-hover:scale-[1.04]"
+      {/* Where the cover photo used to be. A row of the plan's own category
+          icons, derived from the stops: it changes as the plan does, and it
+          says at a glance whether this is three restaurants or a museum and a
+          park. Shallower than the old 4:3 photo, because an icon row does not
+          need the height and the text below is now the thing worth reading.
+
+          The same icons tile faintly behind it, because five of them centred
+          in a 5:2 box left most of the box empty — worst on a plan with no
+          stops yet, which was a single pin in a pink field. The row stays at
+          full strength so it is still the thing being read. */}
+      <div className="bg-clay-soft/50 border-line relative flex aspect-[5/2] items-center justify-center gap-4 overflow-hidden border-b">
+        <CategoryPattern
+          categories={destinations.map((d) => d.category)}
+          tiles={24}
+          className="text-clay/15"
         />
-        <div className="absolute inset-x-0 bottom-0 flex gap-2 bg-gradient-to-t from-black/55 to-transparent p-3 pt-10">
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-medium text-ink">
+
+        {destinations.slice(0, 5).map((destination, index) => {
+          const Icon = iconFor(destination.category);
+          return (
+            <Icon
+              key={`${destination.id}-${index}`}
+              size={28}
+              strokeWidth={1.25}
+              aria-hidden
+              // `relative`, or the absolutely positioned pattern paints over it.
+              className="text-clay relative transition-transform duration-500 group-hover:-translate-y-0.5"
+            />
+          );
+        })}
+        {destinations.length === 0 ? (
+          <MapPin
+            size={26}
+            strokeWidth={1.25}
+            aria-hidden
+            className="text-clay/40 relative"
+          />
+        ) : null}
+
+        <div className="absolute inset-x-0 bottom-0 flex gap-2 p-3">
+          <span className="text-ink border-line inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1 text-[11px] font-medium">
             <MapPin size={12} aria-hidden />
             {destinations.length} stops
           </span>
-          <span className="inline-flex items-center gap-1 rounded-full bg-white/92 px-2.5 py-1 text-[11px] font-medium text-ink">
+          <span className="text-ink border-line inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1 text-[11px] font-medium">
             <Clock size={12} aria-hidden />
             {totals.totalMinutes === null
               ? "Length unknown"
@@ -68,8 +97,8 @@ export function PlanCard({
         </div>
 
         <div className="border-line mt-3 flex items-center justify-between border-t pt-3">
-          {/* The badges over the photo already carry stops and length, so this
-              row shows the one thing they do not: when to set off. */}
+          {/* The badges over the icon row already carry stops and length, so
+              this row shows the one thing they do not: when to set off. */}
           <span className="text-ink-soft inline-flex items-center gap-1.5 text-sm">
             <Clock size={14} className="text-clay" aria-hidden />
             Starts around {plan.startTime}

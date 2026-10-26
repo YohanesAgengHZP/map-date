@@ -5,14 +5,17 @@ import { Heart } from "lucide-react";
 import { getDestinations } from "@/data/destinations";
 import { formatDuration } from "@/lib/format";
 import { useFavorites } from "@/lib/useFavorites";
+import { useLocalStore } from "@/lib/useLocalStore";
+import { visitDurationsStore, withVisitDurations } from "@/lib/visitDurations";
 import { DestinationDetailModal } from "./DestinationDetailModal";
-import { SafeImage } from "./SafeImage";
+import { CategoryIcon } from "./CategoryIcon";
 import { Button } from "./ui";
 
 export function SavedClient() {
   const { favoriteIds, isFavorite, toggle } = useFavorites();
   const [detailId, setDetailId] = useState<string | null>(null);
-  const saved = getDestinations(favoriteIds);
+  const durations = useLocalStore(visitDurationsStore);
+  const saved = withVisitDurations(getDestinations(favoriteIds), durations);
   const detailDestination = saved.find((d) => d.id === detailId);
 
   if (saved.length === 0) {
@@ -31,12 +34,8 @@ export function SavedClient() {
             key={destination.id}
             className="border-line bg-paper overflow-hidden rounded-2xl border"
           >
-            <div className="relative aspect-[4/3]">
-              <SafeImage
-                src={destination.photos[0]?.url}
-                alt={destination.photos[0]?.alt ?? destination.name}
-                sizes="(max-width: 640px) 100vw, 33vw"
-              />
+            <div className="relative aspect-[5/2]">
+              <CategoryIcon category={destination.category} size={34} />
               <button
                 type="button"
                 onClick={() => toggle(destination.id)}

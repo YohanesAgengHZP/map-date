@@ -1,11 +1,18 @@
+import { getCustomPlace } from "@/lib/customPlaces";
 import type { Destination } from "@/lib/types";
 
 /**
  * REAL VENUES ONLY.
  *
- * Every entry below is an actual place in or around Yogyakarta, and every photo
- * is a real photo of that place, supplied by the project owner and served from
- * `public/venues/<slug>/`. No stock imagery and no invented venues remain.
+ * Every entry below is an actual place in or around Yogyakarta. No invented
+ * venues. These twenty are the hand-written seed; everything else arrives
+ * through search, from OpenStreetMap, and is cached in `customPlaces`.
+ *
+ * No photos anywhere, by design. The venue photos that used to live in
+ * `public/venues/` were real and were the owner's own, but OpenStreetMap has
+ * no imagery for searched places, so keeping them meant two classes of venue
+ * and one of them looking broken. See the note on `Destination` in
+ * `lib/types.ts`.
  *
  * Coordinates come from OpenStreetMap where the venue is mapped, and were
  * checked against the routable road network. Where a venue is NOT in
@@ -31,18 +38,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.7761738,
     longitude: 110.3883598,
     address: "Jl. Moses Gatotkaca No.B 9 - 14, Mrican, Caturtunggal, Kec. Depok, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55281",
-    photos: [
-      {
-        id: "nanamia-1",
-        url: "/venues/nanamia/1.webp",
-        alt: "Bright dining room with yellow walls and teal columns, guests at tables",
-      },
-      {
-        id: "nanamia-2",
-        url: "/venues/nanamia/2.webp",
-        alt: "Yellow and teal interior with the Pizza Nanamia sign on the wall",
-      },
-    ],
     visitDurationMinutes: 90,
     openingHours: "11:00 – 22:00",
     tags: ["Foodie", "Pizza", "Garden seating"],
@@ -60,23 +55,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.818465,
     longitude: 110.3619559,
     address: "Tirtodipuran St No.24A, Mantrijeron, Yogyakarta City, Special Region of Yogyakarta 55143",
-    photos: [
-      {
-        id: "mediterranea-1",
-        url: "/venues/mediterranea/1.webp",
-        alt: "Dining room with a circular emblem on the wall, string lights and potted plants",
-      },
-      {
-        id: "mediterranea-2",
-        url: "/venues/mediterranea/2.webp",
-        alt: "Blue-walled dining room with wooden tables, framed pictures and a ceiling fan",
-      },
-      {
-        id: "mediterranea-3",
-        url: "/venues/mediterranea/3.webp",
-        alt: "Black and white view of the Mediterranea window sign above stacked plates",
-      },
-    ],
     visitDurationMinutes: 90,
     openingHours: "08:00 – 23:00",
     rating: 4.6,
@@ -98,23 +76,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.7836247,
     longitude: 110.3987375,
     address: "Ambarukmo 377A, Ambarukmo, Caturtunggal, Kec. Depok, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55281",
-    photos: [
-      {
-        id: "giorno-1",
-        url: "/venues/giorno/1.webp",
-        alt: "The two-storey restaurant lit up at night, strung with lights and hanging plants",
-      },
-      {
-        id: "giorno-2",
-        url: "/venues/giorno/2.webp",
-        alt: "Interior stairway flanked by green plants leading to the upper floor",
-      },
-      {
-        id: "giorno-3",
-        url: "/venues/giorno/3.webp",
-        alt: "Ground-floor counter and staircase seen from the entrance",
-      },
-    ],
     visitDurationMinutes: 90,
     tags: ["Foodie", "Pizza", "Halal"],
     directionsUrl:
@@ -133,23 +94,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.7700141,
     longitude: 110.3582908,
     address: "Jl. Rogoyudan 1, Rogoyudan, Sinduadi, Kec. Mlati, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55284",
-    photos: [
-      {
-        id: "lunion-1",
-        url: "/venues/lunion-pizza/1.webp",
-        alt: "A group in aprons shaping pizza dough along a brick counter",
-      },
-      {
-        id: "lunion-2",
-        url: "/venues/lunion-pizza/2.webp",
-        alt: "The courtyard at dusk, tables set out under a lit canopy",
-      },
-      {
-        id: "lunion-3",
-        url: "/venues/lunion-pizza/3.webp",
-        alt: "The L'Union Pizza sign reading Make Ur Own Pizza, with opening hours and address",
-      },
-    ],
     visitDurationMinutes: 120,
     openingHours: "11:00 – 22:00 (Fri from 14:00)",
     tags: ["Foodie", "Make your own", "Pizza"],
@@ -167,23 +111,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.8002877,
     longitude: 110.3635893,
     address: "Jl. Margo Mulyo No.6, Ngupasan, Kec. Gondomanan, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55122",
-    photos: [
-      {
-        id: "vredeburg-1",
-        url: "/venues/vredeburg/1.webp",
-        alt: "A large bronze relief sculpture mounted on a dark gallery wall",
-      },
-      {
-        id: "vredeburg-2",
-        url: "/venues/vredeburg/2.webp",
-        alt: "A gallery room hung with paintings above a dark wood floor",
-      },
-      {
-        id: "vredeburg-3",
-        url: "/venues/vredeburg/3.webp",
-        alt: "A museum corridor with a diorama set behind a rope barrier",
-      },
-    ],
     visitDurationMinutes: 75,
     tags: ["Heritage", "Museum", "Malioboro"],
     directionsUrl:
@@ -201,23 +128,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.8022517,
     longitude: 110.3613692,
     address: "Jl. Pangurakan No.6, Ngupasan, Kec. Gondomanan, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55122",
-    photos: [
-      {
-        id: "sonobudoyo-1",
-        url: "/venues/sonobudoyo/1.webp",
-        alt: "Display cases of wayang puppets and krises in a darkened gallery",
-      },
-      {
-        id: "sonobudoyo-2",
-        url: "/venues/sonobudoyo/2.webp",
-        alt: "Mannequins in Javanese batik dress standing in front of a display screen",
-      },
-      {
-        id: "sonobudoyo-3",
-        url: "/venues/sonobudoyo/3.webp",
-        alt: "A long gallery hall of artefacts beneath a hanging lamp",
-      },
-    ],
     visitDurationMinutes: 90,
     tags: ["Heritage", "Museum", "Wayang"],
     directionsUrl:
@@ -233,23 +143,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.8039517,
     longitude: 110.3955387,
     address: "Jl. Kebun Raya No.2, Rejowinangun, Kec. Kotagede, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55171",
-    photos: [
-      {
-        id: "gembira-loka-1",
-        url: "/venues/gembira-loka/1.webp",
-        alt: "Visitors in small boats on the green lake inside the zoo",
-      },
-      {
-        id: "gembira-loka-2",
-        url: "/venues/gembira-loka/2.webp",
-        alt: "The painted welcome arch at the entrance, under tall trees",
-      },
-      {
-        id: "gembira-loka-3",
-        url: "/venues/gembira-loka/3.webp",
-        alt: "A crowd seated under a canopy watching a show on the lawn",
-      },
-    ],
     visitDurationMinutes: 150,
     tags: ["Outdoorsy", "Walking", "Half day"],
     directionsUrl:
@@ -259,31 +152,19 @@ export const DESTINATIONS: Destination[] = [
     id: "batik-workshop",
     name: "Batik Workshop",
     category: "Craft workshop",
-    // WEAKEST ENTRY. The photos are real, but no venue name or address was
+    // WEAKEST ENTRY. No venue name or address was
     // supplied, so the name is a placeholder and the pin is an approximate
     // point in the Tirtodipuran batik quarter. Confirm the operator before
     // this is shown to anyone.
     locationPrecision: "approximate",
     bookingRequired: true,
     description:
-      "A half-day batik class: draw in wax with a canting, dye, then wait while it dries. Slow, fiddly, and you leave holding something you made. Still working out exactly which studio this is. The photos are real, the pin is a guess.",
+      "A half-day batik class: draw in wax with a canting, dye, then wait while it dries. Slow, fiddly, and you leave holding something you made. Still working out exactly which studio this is, so the pin is a guess.",
     // Pin corrected to Jalan Tirtodipuran to match the supplied address; the
     // previous value landed on Jalan Karawitan II in Kasihan, Bantul.
     latitude: -7.8185241,
     longitude: 110.3651688,
     address: "Daerah Istimewa, Tirtodipuran St No.54, Mantrijeron, Yogyakarta City, Special Region of Yogyakarta 55143",
-    photos: [
-      {
-        id: "batik-1",
-        url: "/venues/batik-workshop/1.webp",
-        alt: "A woman drawing batik with a canting at a work table, framed batik on the walls behind",
-      },
-      {
-        id: "batik-2",
-        url: "/venues/batik-workshop/2.webp",
-        alt: "A long cream batik cloth with a floral pattern laid out on a table",
-      },
-    ],
     visitDurationMinutes: 120,
     tags: ["Artsy", "Workshop", "To confirm"],
     directionsUrl:
@@ -302,18 +183,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.76,
     longitude: 110.3990012,
     address: "Jl. Kaliwaru No. 1b, Kaliwaru, Condongcatur, Depok, Sleman",
-    photos: [
-      {
-        id: "mohan-1",
-        url: "/venues/mohan-burger/1.webp",
-        alt: "A tall fried chicken burger sitting in a bowl of cheese sauce, with a drink behind it",
-      },
-      {
-        id: "mohan-2",
-        url: "/venues/mohan-burger/2.webp",
-        alt: "Several burgers on metal trays with Mohan-printed paper liners, beside a tray of saucy fried chicken",
-      },
-    ],
     visitDurationMinutes: 75,
     openingHours: "08:00 – 23:00",
     tags: ["Foodie", "Burgers", "Opens early"],
@@ -331,18 +200,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.7621532,
     longitude: 110.4037734,
     address: "Jl. K.H. Wahid Hasyim, Ngropoh, Condongcatur, Depok, Sleman",
-    photos: [
-      {
-        id: "ryuji-1",
-        url: "/venues/ryuji/1.webp",
-        alt: "A long plate of salmon sushi rolls topped with roe and mayonnaise",
-      },
-      {
-        id: "ryuji-2",
-        url: "/venues/ryuji/2.webp",
-        alt: "Chopsticks lifting a salmon-topped sushi roll from a dark plate",
-      },
-    ],
     visitDurationMinutes: 75,
     tags: ["Foodie", "Ramen", "Sushi"],
     directionsUrl:
@@ -364,10 +221,11 @@ export const DESTINATIONS: Destination[] = [
    *   live on Google and nowhere citable, and a planner that invents them is
    *   worse than one that says nothing.
    *
-   * Photos are owner-supplied and real, same as the rest of the file, and every
-   * venue now has its own. `itinerary.test.ts` asserts that, so a photo-less
-   * venue fails the suite rather than slipping out to production behind a
-   * placeholder.
+   * The owner-supplied photos this file used to carry were removed with the
+   * rest: OpenStreetMap has none for searched places, so keeping them meant
+   * two classes of venue. Several comments below still cite a photo as the
+   * source for an opening time, which is where that time genuinely came from;
+   * the image itself is in git history, not in the repo.
    */
   {
     id: "jogja-art-activity",
@@ -377,7 +235,7 @@ export const DESTINATIONS: Destination[] = [
     // behind the main post office at Titik Nol and opposite Sonobudoyo. The
     // building is not in OpenStreetMap, so the pin is the post office next door.
     //
-    // There is a second, newer branch in Mantrijeron: photo 2 is its opening
+    // There is a second, newer branch in Mantrijeron, read off its opening
     // banner. It post-dates every listing that is indexed, so no address for it
     // was findable and the pin stays on Pangurakan. Confirm which branch you
     // are going to before relying on the map.
@@ -387,18 +245,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.8018266,
     longitude: 110.3651725,
     address: "Griya Abhipraya, Jl. Pangurakan, Ngupasan, Kec. Gondomanan, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55122",
-    photos: [
-      {
-        id: "jogja-art-activity-1",
-        url: "/venues/jogja-art-activity/1.webp",
-        alt: "A group in green aprons outside the studio, each holding up the piece they painted",
-      },
-      {
-        id: "jogja-art-activity-2",
-        url: "/venues/jogja-art-activity/2.webp",
-        alt: "Tables of people painting in the evening under string lights, below an Art Time banner for the Mantrijeron branch",
-      },
-    ],
     visitDurationMinutes: 120,
     openingHours: "10:00 – 21:00 (Fri – Sun from 09:00)",
     tags: ["Artsy", "Pottery", "Painting"],
@@ -416,23 +262,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.8000614,
     longitude: 110.3532393,
     address: "Jl. Prof. Dr. Ki Amri Yahya, Pakuncen, Kec. Wirobrajan, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55253",
-    photos: [
-      {
-        id: "jogja-national-museum-1",
-        url: "/venues/jogja-national-museum/1.webp",
-        alt: "A crocheted coral reef installation filling a glass dome, with yellow fish strung overhead",
-      },
-      {
-        id: "jogja-national-museum-2",
-        url: "/venues/jogja-national-museum/2.webp",
-        alt: "A visitor looking up at a wall of large, densely drawn figures in bright marker",
-      },
-      {
-        id: "jogja-national-museum-3",
-        url: "/venues/jogja-national-museum/3.webp",
-        alt: "A guide talking to a group in a red-walled room hung with framed works",
-      },
-    ],
     visitDurationMinutes: 75,
     tags: ["Artsy", "Gallery", "Check programme"],
     directionsUrl:
@@ -451,18 +280,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.8282054,
     longitude: 110.4464549,
     address: "Jl. Wonosari Km 10, Sitimulyo, Kec. Piyungan, Kabupaten Bantul, Daerah Istimewa Yogyakarta 55792",
-    photos: [
-      {
-        id: "kids-fun-parcs-1",
-        url: "/venues/kids-fun-parcs/1.webp",
-        alt: "Two small electric police cars on a miniature street circuit built around a Tugu replica",
-      },
-      {
-        id: "kids-fun-parcs-2",
-        url: "/venues/kids-fun-parcs/2.webp",
-        alt: "A blue and gold carousel turning behind a low hedge on a bright day",
-      },
-    ],
     visitDurationMinutes: 180,
     openingHours: "09:00 – 17:00 (zones vary)",
     tags: ["Outdoorsy", "Rides", "Half day"],
@@ -482,18 +299,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.6849652,
     longitude: 110.3405999,
     address: "Jl. Magelang Km 14, Jetis, Caturharjo, Kec. Sleman, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55515",
-    photos: [
-      {
-        id: "ibarbo-park-1",
-        url: "/venues/ibarbo-park/1.webp",
-        alt: "The park seen from above at dusk, rides and painted facades lit along a curving street",
-      },
-      {
-        id: "ibarbo-park-2",
-        url: "/venues/ibarbo-park/2.webp",
-        alt: "A giant sprinkled doughnut sculpture on the street outside the park entrance",
-      },
-    ],
     visitDurationMinutes: 180,
     openingHours: "09:00 – 20:00 (Sat – Sun until 22:00)",
     tags: ["Outdoorsy", "Rides", "Half day"],
@@ -506,30 +311,13 @@ export const DESTINATIONS: Destination[] = [
     category: "Korean restaurant",
     // Place marker reverse-geocodes to Jalan Damai in Sinduharjo, Ngaglik,
     // well north of the ring road. The house number and hamlet come off the
-    // venue's own caption in photo 3, which is more specific than anything
-    // OpenStreetMap has. Hours are still not published anywhere citable.
+    // venue's own caption in one of the supplied photos, more specific than
+    // anything OpenStreetMap has. Hours are still not published citably.
     description:
       "Korean food up on Jalan Damai in Ngaglik, north of the ring road and a fair ride from the city centre. Stews, kimbap, rice sets and fried chicken, brought out as a spread rather than grilled at the table, in a bright room done out with timber and lattice screens.",
     latitude: -7.734471,
     longitude: 110.3944807,
     address: "Jl. Damai No.1, Tambakan, Sinduharjo, Kec. Ngaglik, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55581",
-    photos: [
-      {
-        id: "hankki-korean-1",
-        url: "/venues/hankki-korean/1.webp",
-        alt: "A full table of Korean dishes on turquoise plates: kimbap, fried chicken, salad, rice and stew",
-      },
-      {
-        id: "hankki-korean-2",
-        url: "/venues/hankki-korean/2.webp",
-        alt: "A bubbling stone pot of budae jjigae on a wooden tray with rice and side dishes",
-      },
-      {
-        id: "hankki-korean-3",
-        url: "/venues/hankki-korean/3.webp",
-        alt: "The dining room in pale timber with lattice screens, a tiled canopy and diners by the window",
-      },
-    ],
     visitDurationMinutes: 90,
     tags: ["Foodie", "Korean", "North Jogja"],
     directionsUrl:
@@ -546,18 +334,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.7620258,
     longitude: 110.4038493,
     address: "Jl. K.H. Wahid Hasyim, Ngropoh, Condongcatur, Kec. Depok, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55281",
-    photos: [
-      {
-        id: "hou-kie-1",
-        url: "/venues/hou-kie/1.webp",
-        alt: "Two claypots of rice and braised meat on a blue table with a dish of sauce",
-      },
-      {
-        id: "hou-kie-2",
-        url: "/venues/hou-kie/2.webp",
-        alt: "The dining room with round tables, a wood-panelled ceiling and the Hou Kie counter sign",
-      },
-    ],
     visitDurationMinutes: 75,
     tags: ["Foodie", "Hong Kong", "Cafe"],
     directionsUrl:
@@ -575,13 +351,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.776616,
     longitude: 110.4119409,
     address: "Kledokan, Caturtunggal, Kec. Depok, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55281",
-    photos: [
-      {
-        id: "bpk-ola-kisat-1",
-        url: "/venues/bpk-ola-kisat/1.webp",
-        alt: "The lit entrance at night, a BPK Olakisat Jogja sign above a brick doorway with benches either side",
-      },
-    ],
     visitDurationMinutes: 75,
     tags: ["Foodie", "Pork", "Non-halal"],
     directionsUrl:
@@ -598,15 +367,6 @@ export const DESTINATIONS: Destination[] = [
     latitude: -7.7957132,
     longitude: 110.3928004,
     address: "Jl. Ipda Tut Harsono, Mujamuju, Kec. Umbulharjo, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55165",
-    // Only one photo: the other supplied shot of the storefront carries another
-    // account's watermark, so it stays archived rather than served.
-    photos: [
-      {
-        id: "bpk-tesalonika-1",
-        url: "/venues/bpk-tesalonika/1.webp",
-        alt: "Roast pork and chopped greens on a green plate, with rice, soup and two sauces around it",
-      },
-    ],
     visitDurationMinutes: 75,
     tags: ["Foodie", "Pork", "Non-halal"],
     directionsUrl:
@@ -620,25 +380,13 @@ export const DESTINATIONS: Destination[] = [
     // well, roughly 150 m north of Tesalonika. Two Batak kitchens on one
     // street is not an error in the data.
     //
-    // openingHours read straight off the venue's own banner in photo 2, the
-    // same way L'Union's were: "BUKA SETIAP HARI 11.00 - 21.00 WIB".
+    // openingHours read straight off the venue's own banner in a supplied
+    // photo, same way L'Union's were: "BUKA SETIAP HARI 11.00 - 21.00 WIB".
     description:
       "Batak pork in Umbulharjo, on the same street as Tesalonika and about a hundred and fifty metres north of it. Saksang and panggang rather than a long menu, eaten off red tables. Non-halal.",
     latitude: -7.7943805,
     longitude: 110.3930104,
     address: "Jl. Ipda Tut Harsono, Mujamuju, Kec. Umbulharjo, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55165",
-    photos: [
-      {
-        id: "babi-toba-tabo-1",
-        url: "/venues/babi-toba-tabo/1.webp",
-        alt: "Four oval plates of crisp and braised pork with cucumber and cabbage on a red table",
-      },
-      {
-        id: "babi-toba-tabo-2",
-        url: "/venues/babi-toba-tabo/2.webp",
-        alt: "The red dining area under a banner reading Buka Setiap Hari 11.00 to 21.00 WIB",
-      },
-    ],
     visitDurationMinutes: 75,
     openingHours: "11:00 – 21:00",
     tags: ["Foodie", "Pork", "Non-halal"],
@@ -648,13 +396,21 @@ export const DESTINATIONS: Destination[] = [
 ];
 const BY_ID = new Map(DESTINATIONS.map((d) => [d.id, d]));
 
+/**
+ * Built-ins first, then places the user found through search.
+ *
+ * This is the single seam between the hand-written catalogue above and live
+ * OpenStreetMap data, which is why adding search needed no change at any
+ * existing call site. A collision cannot happen: live ids are prefixed `osm:`
+ * and built-in ids are slugs.
+ */
 export function getDestination(id: string): Destination | undefined {
-  return BY_ID.get(id);
+  return BY_ID.get(id) ?? getCustomPlace(id);
 }
 
 /** Resolve ids to destinations, dropping anything unknown. */
 export function getDestinations(ids: string[]): Destination[] {
   return ids
-    .map((id) => BY_ID.get(id))
+    .map(getDestination)
     .filter((d): d is NonNullable<typeof d> => d !== undefined);
 }

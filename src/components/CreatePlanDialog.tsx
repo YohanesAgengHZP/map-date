@@ -8,7 +8,7 @@ import { Button, cx } from "./ui";
 
 /**
  * Title, start time and mood. Stops are not picked here on purpose: the plan
- * page already has a stop picker with photos, durations and a live map, and
+ * page already has a stop picker with search, durations and a live map, and
  * rebuilding a worse one inside a dialog helps nobody.
  */
 export function CreatePlanDialog({
