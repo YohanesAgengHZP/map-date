@@ -97,8 +97,8 @@ came from the project owner, nine of them as a list of names and Google Maps
 links: Jogja Art Activity, Jogja National Museum, Kids Fun Parcs, Ibarbo Park,
 Hankki, Hou Kie, BPK Ola Kisat, BPK Tesalonika and Toba Tabo.
 
-**There are no photos, anywhere, by design.** The owner supplied real venue
-photos and the app used to serve them from `public/venues/`. They were removed
+**There are no venue photos, anywhere, by design.** The owner supplied real
+venue photos and the app used to serve them from `public/venues/`. They were removed
 when live search landed: OpenStreetMap has no venue imagery worth the name, so
 keeping them meant two classes of venue, with everything you added yourself
 looking broken beside the seed data. An Overpass survey of 934 named Jogja POIs
@@ -121,6 +121,17 @@ box empty, which reads as a failed image; a tile has no middle.
 The original PNGs are still in `design/assets/<folder>/`, unused by the app and
 not shipped. The served WebP copies and the Pillow script that produced them
 are in git history as of `Free choose POIs`.
+
+**The five mood tiles are the one exception, and they are drawings.** The owner
+supplied an illustration per mood in `design/assets/categories/`;
+`scripts/convert-mood-assets.py` writes them to `public/moods/<mood>.webp` and
+the tiles on the home page render them as plain `img` (pre-sized, so no
+`next/image`). They sit outside the no-photos rule because they are pictures of
+nowhere: one per mood, served to everybody, claiming nothing about any real
+venue. The converter floods each backdrop to `--color-paper` from the corners
+inward — the originals disagreed, four near-white and one cream, which in a row
+of five read as one dirty tile — and leaves white *inside* the drawing alone.
+Re-run it after replacing an illustration.
 
 Coordinates came out of the `!3d`/`!4d` pair in the supplied Google
 Maps URL, and each was reverse-geocoded against OpenStreetMap to confirm the

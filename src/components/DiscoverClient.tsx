@@ -190,28 +190,54 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
                     "focus-visible:outline-clay",
                   )}
                 >
-                  {/* These were photo tiles. A mood is not a category, so
-                      there is no icon that honestly stands for "Cozy" the way
-                      one stands for "Pizzeria": the label and its blurb say it
-                      better than a picked symbol would. */}
+                  {/* These were photo tiles, then text only: a mood is not a
+                      category, and no icon honestly stands for "Cozy" the way
+                      one stands for "Pizzeria". A drawing can, and these are
+                      drawings — one per mood, of nowhere in particular — so
+                      they say nothing false about any real venue the way a
+                      stock photograph of someone else's café would. */}
                   <span
                     className={cx(
-                      "block rounded-xl border-2 px-3 py-3 transition-colors",
+                      "block overflow-hidden rounded-xl border-2 transition-colors",
                       selected
                         ? "border-clay bg-clay-soft/50"
                         : "border-line bg-paper group-hover:border-clay/40",
                     )}
                   >
-                    <span
-                      className={cx(
-                        "block text-sm font-medium",
-                        selected ? "text-clay" : "text-ink",
-                      )}
-                    >
-                      {item.label}
-                    </span>
-                    <span className="text-ink-muted mt-0.5 block text-xs leading-snug">
-                      {item.blurb}
+                    {/* `contain`, not `cover`: the art runs to the edges of its
+                        square and a 4:3 crop would cut the pens off the bottom
+                        of "Artsy". The letterbox is invisible because the
+                        converter repaints each backdrop `--color-paper`.
+
+                        Plain `img`: five static WebPs of known size, already
+                        sized for the tile, so `next/image` would add a config
+                        and a round trip to re-do work the build step did. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element --
+                        the rule guards against unsized, unoptimised images.
+                        These are five static WebPs built to the tile's size by
+                        `convert-mood-assets.py`, with width, height and lazy
+                        loading set; `next/image` would re-optimise them at
+                        request time for nothing. */}
+                    <img
+                      src={`/moods/${item.id}.webp`}
+                      alt=""
+                      width={512}
+                      height={512}
+                      loading="lazy"
+                      className="aspect-[4/3] w-full bg-paper object-contain"
+                    />
+                    <span className="block px-3 py-2.5">
+                      <span
+                        className={cx(
+                          "block text-sm font-medium",
+                          selected ? "text-clay" : "text-ink",
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                      <span className="text-ink-muted mt-0.5 block text-xs leading-snug">
+                        {item.blurb}
+                      </span>
                     </span>
                   </span>
                 </button>
@@ -385,14 +411,17 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="border-line min-w-0 flex-1 rounded-xl border px-3 py-1.5 sm:border-0">
+    <label className="border-field min-w-0 flex-1 rounded-xl border px-3 py-1.5 sm:border-0">
       <span className="text-ink-muted block text-[11px] tracking-wide uppercase">
         {label}
       </span>
+      {/* No `focus:outline-none`. Here it removed the focus ring and put
+          nothing in its place, so tabbing to the mood or time filter left no
+          visible indication of where focus was at all. */}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="text-ink w-full cursor-pointer appearance-none bg-transparent pr-4 text-sm focus:outline-none"
+        className="text-ink w-full cursor-pointer appearance-none bg-transparent pr-4 text-sm"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
