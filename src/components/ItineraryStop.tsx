@@ -56,21 +56,27 @@ export function ItineraryStop({
         )}
       >
         {/* The whole card selects the stop; the controls below are separate
-            buttons, so they are rendered as siblings rather than nested. */}
+            buttons, so they are rendered as siblings rather than nested.
+
+            No `aria-label` here. One read "Stop 3: Hou Kie", and a name
+            replaces everything inside the element it names: tabbing the list
+            announced the venue and nothing else — not the arrival window, not
+            how long you are there, and not "They're shut by then", which is
+            the whole reason the card is worth reading. The content is the
+            name now, and the number tells you which stop it is. */}
         <button
           type="button"
           onClick={onSelect}
           aria-pressed={selected}
-          aria-label={`Stop ${order}: ${destination.name}`}
           className="flex w-full gap-3 p-3 text-left"
         >
           <span
-            aria-hidden
             className={cx(
               "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
               selected ? "bg-clay-dark text-white" : "bg-clay text-white",
             )}
           >
+            <span className="sr-only">Stop </span>
             {order}
           </span>
 

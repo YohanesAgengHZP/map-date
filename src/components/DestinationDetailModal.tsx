@@ -49,14 +49,20 @@ export function DestinationDetailModal({
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // The first focusable in here is the heart, so opening a place put a
+      // keyboard user on "Save for later" before they had read a word of it.
+      // Focusing the card itself starts them at the top, where the name is.
+      dialog.focus();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
-
 
   return (
     <dialog
       ref={ref}
+      tabIndex={-1}
       aria-labelledby="destination-modal-title"
       onClose={onClose}
       onClick={(event) => {

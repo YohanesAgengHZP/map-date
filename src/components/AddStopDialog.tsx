@@ -64,7 +64,12 @@ export function AddStopDialog({
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      // Otherwise the dialog's first focusable is Close, which is the one
+      // control nobody opened this sheet to press.
+      inputRef.current?.focus();
+    }
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
@@ -111,6 +116,7 @@ export function AddStopDialog({
   const remote = results.filter(
     (place) => !localIds.has(place.id) && !excludeIds.includes(place.id),
   );
+  const resultCount = local.length + remote.length;
 
   const close = () => {
     setQuery("");
@@ -175,14 +181,7 @@ export function AddStopDialog({
               input take the global `:focus-visible` ring put a second rounded
               outline *inside* the pill, a ring and a border a couple of pixels
               apart, which read as a cramped double border. On the wrapper it
-              sits outside the pill and matches every other control.
-
-              `outline-[var(--color-clay)]`, not `outline-clay`: the colour
-              utility generates no `outline-color` in this build, so the ring
-              fell back to `currentColor` and came out ink. The same dead class
-              sits on the mood tiles in `DiscoverClient`, where it goes
-              unnoticed because the `:focus-visible` rule in `globals.css` is
-              hand-written CSS and paints them clay anyway. */}
+              sits outside the pill and matches every other control. */}
           <div className="border-field focus-within:border-clay focus-within:outline-[var(--color-clay)] flex items-center gap-2 rounded-full border px-3 py-2 transition-colors focus-within:outline-2 focus-within:outline-offset-2">
             <Search size={15} className="text-ink-muted shrink-0" aria-hidden />
             <input
@@ -215,7 +214,13 @@ export function AddStopDialog({
               so a screen reader hears one voice here and the layout does not
               shift when something is added. Search state outranks it: if a
               request is in flight, what is happening now matters more than
-              what happened a moment ago. */}
+              what happened a moment ago.
+
+              An answer landing is itself a status change, so it is said here.
+              Without that branch the region fell back to "type the name of
+              anywhere you want to go" at the moment a list of answers appeared
+              below it — the one thing a reader who cannot see the list must
+              not be told. */}
           <p
             role="status"
             className={cx(
@@ -229,17 +234,27 @@ export function AddStopDialog({
                 ? "Looking..."
                 : added
                   ? `Added ${added}. Add another, or close to see the plan.`
-                  : "Type the name of anywhere you want to go."}
+                  : searchable
+                    ? resultCount === 0
+                      ? `Nothing found for "${trimmed}".`
+                      : `${resultCount} ${resultCount === 1 ? "place" : "places"} to add.`
+                    : "Type the name of anywhere you want to go."}
           </p>
         </div>
 
-        {local.length === 0 && remote.length === 0 ? (
+        {resultCount === 0 ? (
+          /* A failed request is not an empty result. Blaming the query for a
+             connection problem sends people off rewording a name that was
+             never the trouble, so the failure keeps its own wording here too
+             rather than being contradicted by the line above it. */
           <p className="text-ink-soft p-6 text-center text-sm">
-            {searchable
-              ? searching
-                ? "Searching..."
-                : `Nothing found for "${trimmed}". Try the name on its own, or put the town after it.`
-              : "Everywhere else is already in this plan. Search to add somewhere new."}
+            {failed
+              ? "Could not search just now. Check your connection and try again."
+              : searchable
+                ? searching
+                  ? "Searching..."
+                  : `Nothing found for "${trimmed}". Try the name on its own, or put the town after it.`
+                : "Everywhere else is already in this plan. Search to add somewhere new."}
           </p>
         ) : (
           // `overscroll-contain`: without it, flicking past the end of the

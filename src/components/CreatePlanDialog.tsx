@@ -83,6 +83,15 @@ export function CreatePlanDialog({
                  focused input renders under 16px. */
               className="border-field focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-base sm:text-sm"
             />
+            {/* Blank has always been allowed and quietly became "My plan", and
+                two of those in the grid cannot be told apart. Said out loud
+                rather than made required: naming an afternoon before you know
+                what is in it is the harder question to answer. */}
+            {title.trim() === "" ? (
+              <span className="text-ink-muted mt-1 block text-xs">
+                Leave this blank and it will be called &ldquo;My plan&rdquo;.
+              </span>
+            ) : null}
           </label>
 
           <label className="block">

@@ -8,7 +8,7 @@ export default function MyPlanPage() {
   return (
     <>
       <SiteHeader />
-      <main className="flex-1 pb-16">
+      <main id="main" tabIndex={-1} className="flex-1 pb-16">
         {/* useSearchParams needs a boundary for this route to stay static. */}
         <Suspense>
           <MyPlanClient />

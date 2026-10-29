@@ -200,10 +200,9 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setMood(selected ? "any" : item.id)}
-                  // No `focus-visible:outline-clay`: that utility emits no
-                  // `outline-color` in this build. The global rule rings it.
-                  // `rounded-xl` matches the tile inside, so the ring traces
-                  // the card rather than cutting its corners.
+                  // `rounded-xl` matches the tile inside, so the global
+                  // `:focus-visible` ring traces the card rather than cutting
+                  // its corners.
                   className="group w-full rounded-xl text-left"
                 >
                   {/* These were photo tiles, then text only: a mood is not a
@@ -341,7 +340,12 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
               const isHidden = hidden.includes(entry.id);
               return (
                 <li key={entry.id} className="group/card relative">
-                  <div className={cx(isHidden && "opacity-55")}>{entry.card}</div>
+                  {/* `h-full` here as well as on the card: the grid stretches
+                      this `li`, but the card is a grandchild and would
+                      otherwise size to its own tags. */}
+                  <div className={cx("h-full", isHidden && "opacity-55")}>
+                    {entry.card}
+                  </div>
                   <CardAction
                     entry={entry}
                     hidden={isHidden}
@@ -464,10 +468,13 @@ function FilterSelect({
       <span className="text-ink-muted block text-[11px] tracking-wider uppercase">
         {label}
       </span>
+      {/* `py-0.5`: the select itself rendered 20px tall. The label around it is
+          54px and clicking it does move focus here, but the control a finger
+          aims at is the one with the words in it, and 24px is the minimum. */}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="text-ink w-full cursor-pointer appearance-none bg-transparent pr-6 text-sm outline-none"
+        className="text-ink w-full cursor-pointer appearance-none bg-transparent py-0.5 pr-6 text-sm outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookmarkPlus, Trash2 } from "lucide-react";
 import { customPlacesStore } from "@/lib/customPlaces";
 import { createMyPlan, decodePlan, toPlan, useMyPlans } from "@/lib/myPlans";
@@ -52,6 +52,17 @@ export function MyPlanClient() {
   const seedPlaces = decoded?.places;
 
   const saved = plans.find((p) => p.id === id);
+
+  /**
+   * The route's `metadata` is static, so every state of this page announced
+   * itself as "Your plan" — including a plan somebody else sent and the page
+   * that says the link did not work. Only the browser can know which, so the
+   * title is set here.
+   */
+  const pageTitle = saved?.title ?? shared?.title ?? (token ? "Link did not work" : "Plan not found");
+  useEffect(() => {
+    document.title = `${pageTitle} · Jalan-Jalan`;
+  }, [pageTitle]);
 
   const onStopsChange = useCallback(
     (ids: string[]) => {

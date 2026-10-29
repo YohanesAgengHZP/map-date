@@ -32,6 +32,26 @@ export function formatDurationBand(minutes: number): string {
   return `${lower}–${upper} hours`;
 }
 
+/**
+ * The one-line "what is this plan" summary, from the stops' categories.
+ *
+ * Runs of the same category collapse: Piggy is three Batak restaurants and
+ * read "Batak restaurant → Batak restaurant → Batak restaurant", which looks
+ * like a rendering fault rather than a plan. A count says the same thing and
+ * says it on purpose.
+ */
+export function summarizeCategories(categories: string[]): string {
+  const runs: { category: string; count: number }[] = [];
+  for (const category of categories) {
+    const last = runs.at(-1);
+    if (last?.category === category) last.count += 1;
+    else runs.push({ category, count: 1 });
+  }
+  return runs
+    .map(({ category, count }) => (count > 1 ? `${count} × ${category}` : category))
+    .join(" → ");
+}
+
 export function formatDistance(meters: number): string {
   return meters < 950
     ? `${Math.round(meters / 10) * 10} m`
