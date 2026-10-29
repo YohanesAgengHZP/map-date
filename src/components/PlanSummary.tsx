@@ -78,7 +78,10 @@ function Cell({
         <span className="text-clay mt-px shrink-0">{icon}</span>
         {label}
       </dt>
-      <dd className="text-ink mt-auto pt-1.5 text-sm font-semibold">
+      {/* `tabular-nums`: every figure here is recomputed when a stop is added,
+          removed or reordered, and proportional digits changed width as they
+          did it, so the three columns twitched on each edit. */}
+      <dd className="text-ink mt-auto pt-1.5 text-sm font-semibold tabular-nums">
         {children}
       </dd>
     </div>

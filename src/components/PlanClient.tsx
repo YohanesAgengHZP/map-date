@@ -24,7 +24,12 @@ import {
 } from "@/lib/format";
 import { buildItinerary, calculateTotals, moveItem } from "@/lib/itinerary";
 import { lookupPlaces } from "@/lib/places";
-import { buildDirectionsUrl, estimateRoute, getRoute } from "@/lib/routing";
+import {
+  buildDirectionsUrl,
+  estimateRoute,
+  getRoute,
+  optimizeOrder,
+} from "@/lib/routing";
 import { useFavorites } from "@/lib/useFavorites";
 import { useLocalStore } from "@/lib/useLocalStore";
 import { visitDurationsStore, withVisitDurations } from "@/lib/visitDurations";
@@ -79,6 +84,14 @@ export function PlanClient({
   const [detailId, setDetailId] = useState<string | null>(null);
   const [addStopOpen, setAddStopOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"itinerary" | "map">("itinerary");
+  const [tidying, setTidying] = useState(false);
+  const [orderNote, setOrderNote] = useState<string | null>(null);
+  /** The stop last taken out, and where it sat, so it can be put back. */
+  const [undo, setUndo] = useState<{
+    id: string;
+    index: number;
+    name: string;
+  } | null>(null);
   const { isFavorite, toggle } = useFavorites();
   const customPlaces = useLocalStore(customPlacesStore);
   const durations = useLocalStore(visitDurationsStore);
@@ -216,16 +229,64 @@ export function PlanClient({
   const commitStops = (next: string[]) => {
     setStopIds(next);
     onStopsChange?.(next);
+    // Any edit makes the last answer about the order, and the last offer to
+    // undo, stale.
+    setOrderNote(null);
+    setUndo(null);
+  };
+
+  /**
+   * Ask the router for the shortest way round the same stops.
+   *
+   * Not an effect and not debounced: it runs when the button is pressed and
+   * never on its own. Rearranging someone's afternoon is not something to do
+   * because they happened to add a stop.
+   */
+  const tidyOrder = async () => {
+    setTidying(true);
+    setOrderNote(null);
+    try {
+      const suggestion = await optimizeOrder(destinations);
+      if (suggestion.status === "reordered") {
+        commitStops(suggestion.destinations.map((d) => d.id));
+      } else {
+        setOrderNote(
+          suggestion.status === "already-shortest"
+            ? "That is already the short way round."
+            : "Could not work out the driving order just now. Try again in a bit.",
+        );
+      }
+    } finally {
+      setTidying(false);
+    }
   };
 
   const moveStop = (index: number, delta: number) =>
     commitStops(moveItem(stopIds, index, index + delta));
 
+  /**
+   * Taking a stop out is the one destructive edit reachable in a single click,
+   * from a 28px icon sitting beside the two reorder buttons — and on a plan of
+   * your own it is written to storage in the same tick. So it offers the way
+   * back rather than asking first: a confirm on every removal would tax the
+   * ordinary case to guard the rare one.
+   */
   const removeStop = (id: string) => {
     if (!owned && stopIds.length <= 1) return;
+    const index = stopIds.indexOf(id);
+    const name = getDestination(id)?.name ?? "That stop";
     const next = stopIds.filter((x) => x !== id);
     commitStops(next);
+    setUndo({ id, index, name });
     if (selectedId === id) setSelectedId(next[0] ?? null);
+  };
+
+  const undoRemove = () => {
+    if (!undo) return;
+    const next = [...stopIds];
+    next.splice(undo.index, 0, undo.id);
+    commitStops(next);
+    setSelectedId(undo.id);
   };
 
   /**
@@ -310,31 +371,42 @@ export function PlanClient({
       </section>
 
       <div className="mx-auto max-w-6xl px-4 pt-5 sm:px-6">
-        <div className="text-ink-soft flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
+        <div className="text-ink-soft flex flex-wrap items-center gap-x-5 gap-y-2 text-sm tabular-nums">
           <span className="inline-flex items-center gap-1.5">
             <MapPin size={14} className="text-clay" aria-hidden />
-            {stops.length} stops
+            {stops.length} {stops.length === 1 ? "stop" : "stops"}
           </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Clock size={14} className="text-clay" aria-hidden />
-            {totals.totalMinutes === null
-              ? "Length unknown"
-              : formatDurationBand(totals.totalMinutes)}
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Navigation size={14} className="text-clay" aria-hidden />
-            {totals.travelMinutes === null
-              ? "Travel time unknown"
-              : `~ ${formatDuration(totals.travelMinutes)} travel`}
-          </span>
+          {/* An empty plan measured "under an hour · ~ 0 min travel", which
+              describes an afternoon nobody has planned yet. */}
+          {stops.length > 0 ? (
+            <>
+              <span className="inline-flex items-center gap-1.5">
+                <Clock size={14} className="text-clay" aria-hidden />
+                {totals.totalMinutes === null
+                  ? "Length unknown"
+                  : formatDurationBand(totals.totalMinutes)}
+              </span>
+              {stops.length > 1 ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <Navigation size={14} className="text-clay" aria-hidden />
+                  {totals.travelMinutes === null
+                    ? "Travel time unknown"
+                    : `~ ${formatDuration(totals.travelMinutes)} travel`}
+                </span>
+              ) : null}
+            </>
+          ) : null}
         </div>
 
-        <p className="text-ink-soft mt-4 max-w-2xl text-sm leading-relaxed">
+        {/* `max-w-[65ch]`, not `max-w-2xl`: 42rem at 14px measured about 90
+            characters a line, well past the 60–75 a reader tracks comfortably,
+            and this paragraph is the longest prose in the app. */}
+        <p className="text-ink-soft mt-4 max-w-[65ch] text-sm leading-relaxed">
           {plan.description}
         </p>
 
         {unresolvedCount > 0 ? (
-          <p className="border-line text-ink-soft mt-4 max-w-2xl rounded-xl border border-dashed p-3 text-xs leading-relaxed">
+          <p className="border-line text-ink-soft mt-4 max-w-[65ch] rounded-xl border border-dashed p-3 text-xs leading-relaxed">
             {unresolvedCount === 1 ? "One stop" : `${unresolvedCount} stops`} in
             this plan would not load. Places you searched for are looked up
             again each time the plan is opened, so either the connection failed
@@ -386,7 +458,12 @@ export function PlanClient({
             mobileView === "map" && "hidden lg:block",
           )}
         >
-          <PlanSummary totals={totals} routeSource={route.source} />
+          {/* An empty plan reported "0 min / 0 min / 0 min · under an hour",
+              which is three facts about nothing above the one instruction
+              that matters. */}
+          {stops.length > 0 ? (
+            <PlanSummary totals={totals} routeSource={route.source} />
+          ) : null}
 
           <ItineraryPanel
             stops={stops}
@@ -395,19 +472,29 @@ export function PlanClient({
             onViewDetails={viewDetails}
             onMove={moveStop}
             onRemove={removeStop}
+            undoName={undo?.name ?? null}
+            onUndoRemove={undoRemove}
             onAddStop={() => setAddStopOpen(true)}
+            onTidyOrder={tidyOrder}
+            tidying={tidying}
+            orderNote={orderNote}
             allowEmpty={owned}
           />
 
-          <a
-            href={directionsUrl}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="bg-clay hover:bg-clay-dark flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors"
-          >
-            <Navigation size={15} aria-hidden />
-            Open the whole route in Maps
-          </a>
+          {/* Hidden while the plan is empty: there is no route to open, and as
+              the only filled button on the screen it outranked the one action
+              the page actually had. */}
+          {stops.length > 0 ? (
+            <a
+              href={directionsUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="bg-clay hover:bg-clay-dark flex w-full items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white transition-colors"
+            >
+              <Navigation size={15} aria-hidden />
+              Open the whole route in Maps
+            </a>
+          ) : null}
 
           <SampleNote />
         </div>
@@ -429,15 +516,25 @@ export function PlanClient({
             revealed={mobileView === "map"}
           />
 
-          {/* Route overview, pinned above the map canvas. */}
-          <div className="border-line bg-paper/95 pointer-events-none absolute top-3 left-3 z-[1000] flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs backdrop-blur">
+          {/* Route overview, pinned above the map canvas. Hidden on an empty
+              plan, where "0 stops" only repeats the panel heading alongside it
+              and the canvas already carries its own "add a stop" line. */}
+          <div
+            className={cx(
+              "border-line bg-paper/95 pointer-events-none absolute top-3 left-3 z-[1000] flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs backdrop-blur",
+              stops.length === 0 && "hidden",
+            )}
+          >
             <Route size={13} className="text-clay" aria-hidden />
-            <span className="text-ink font-medium">
-              {stops.length} stops
+            <span className="text-ink font-medium tabular-nums">
+              {stops.length} {stops.length === 1 ? "stop" : "stops"}
               {totalMeters > 0 ? ` · ${formatDistance(totalMeters)}` : ""}
-              {totals.travelMinutes !== null
-                ? ` · ~ ${formatDuration(totals.travelMinutes)}`
-                : " · travel time unknown"}
+              {/* Nothing travels between one stop and itself. */}
+              {stops.length < 2
+                ? ""
+                : totals.travelMinutes !== null
+                  ? ` · ~ ${formatDuration(totals.travelMinutes)}`
+                  : " · travel time unknown"}
             </span>
             {routeIsStale ? (
               <Loader2 size={12} className="text-ink-muted animate-spin" aria-hidden />

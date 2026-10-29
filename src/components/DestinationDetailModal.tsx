@@ -247,7 +247,10 @@ function VisitDurationPicker({ destination }: { destination: Destination }) {
   );
 
   return (
-    <span className="flex flex-wrap items-center gap-2">
+    // `Stat` stacks its label straight onto the value, so without the top
+    // margin the focus ring overlaps "HOW LONG TO STAY"; the wider column gap
+    // keeps it off the reset link.
+    <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-2">
       <label className="sr-only" htmlFor="visit-duration">
         How long to stay at {destination.name}
       </label>
@@ -258,7 +261,7 @@ function VisitDurationPicker({ destination }: { destination: Destination }) {
           const minutes = Number(event.target.value);
           setVisitDuration(destination.id, minutes === published ? null : minutes);
         }}
-        className="border-line focus-visible:outline-clay cursor-pointer rounded-lg border bg-transparent px-2 py-1 text-sm"
+        className="border-line cursor-pointer rounded-lg border bg-transparent px-2 py-1 text-sm"
       >
         {options.map((minutes) => (
           <option key={minutes} value={minutes}>

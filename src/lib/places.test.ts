@@ -1,11 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DESTINATIONS } from "@/data/destinations";
 import {
   buildOverpassQuery,
+  clearPlaceCaches,
   fromOverpass,
   fromPhoton,
   isPlaceId,
+  lookupPlaces,
   parsePlaceId,
+  searchPlaces,
   toPlaceId,
 } from "./places";
 
@@ -174,5 +177,104 @@ describe("buildOverpassQuery", () => {
       "node(id:7);",
     );
     expect(buildOverpassQuery(["nanamia-pizzeria", "vredeburg"])).toBeNull();
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Caching and retry
+ *
+ * Both endpoints are shared, free and rate-limited, so the thing being
+ * asserted is how often we ask them, not what they say.
+ * ------------------------------------------------------------------ */
+
+describe("asking the providers", () => {
+  const ok = (body: unknown) =>
+    new Response(JSON.stringify(body), { status: 200 });
+  const photonBody = { features: [PHOTON_FEATURE] };
+  const overpassBody = {
+    elements: [
+      {
+        type: "node",
+        id: 7,
+        lat: -7.8,
+        lon: 110.37,
+        tags: { name: "Somewhere", amenity: "cafe" },
+      },
+    ],
+  };
+
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    clearPlaceCaches();
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("asks once for a query it has already answered", async () => {
+    fetchMock.mockResolvedValue(ok(photonBody));
+
+    const first = await searchPlaces("nanamia");
+    // Backspace and retype, and the difference in case a person would not
+    // notice they made.
+    const second = await searchPlaces("Nanamia");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(second).toEqual(first);
+    expect(first[0].name).toBe("Nanamia Pizzeria");
+  });
+
+  it("retries a 502 once and keeps the answer", async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response("", { status: 502 }))
+      .mockResolvedValueOnce(ok(overpassBody));
+
+    const places = await lookupPlaces(["osm:N:7"]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(places).toHaveLength(1);
+  });
+
+  it("gives up after the second failure rather than hammering", async () => {
+    fetchMock.mockResolvedValue(new Response("", { status: 502 }));
+
+    await expect(lookupPlaces(["osm:N:7"])).rejects.toThrow("Overpass answered 502");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a refusal that asking again cannot fix", async () => {
+    fetchMock.mockResolvedValue(new Response("", { status: 400 }));
+
+    await expect(searchPlaces("nanamia")).rejects.toThrow("Photon answered 400");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks only about the ids it has not already resolved", async () => {
+    fetchMock.mockResolvedValue(ok(overpassBody));
+    await lookupPlaces(["osm:N:7"]);
+
+    fetchMock.mockClear();
+    fetchMock.mockResolvedValue(ok({ elements: [] }));
+    const again = await lookupPlaces(["osm:N:7", "osm:N:8"]);
+
+    const body = String(fetchMock.mock.calls[0][1].body);
+    expect(body).toContain("id%3A8");
+    expect(body).not.toContain("id%3A7");
+    // The cached one still comes back even though the answer was empty.
+    expect(again.map((place) => place.id)).toEqual(["osm:N:7"]);
+  });
+
+  it("asks once about an id Overpass does not know", async () => {
+    fetchMock.mockResolvedValue(ok({ elements: [] }));
+
+    expect(await lookupPlaces(["osm:N:99"])).toEqual([]);
+    expect(await lookupPlaces(["osm:N:99"])).toEqual([]);
+
+    // A dead id in a share link used to cost 10 to 20 seconds on every mount.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

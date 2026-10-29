@@ -61,10 +61,16 @@
     letter-spacing: -0.01em;
   }
 
+  /* 3px, not 2px: on a filled clay control the ring is the same colour as the
+     fill, and a 2px gap read as a stuck-on second border rather than a ring.
+
+     The radius only reaches controls carrying no `rounded-*` utility — a bare
+     `<select>`, a text button — since the utilities layer wins everywhere
+     else. Those are exactly the ones that otherwise take a hard-cornered ring. */
   :focus-visible {
     outline: 2px solid var(--color-clay);
-    outline-offset: 2px;
-    border-radius: 4px;
+    outline-offset: 3px;
+    border-radius: 6px;
   }
 
   @media (prefers-reduced-motion: reduce) {

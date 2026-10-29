@@ -33,10 +33,11 @@ export const DESTINATIONS: Destination[] = [
     category: "Pizzeria",
     // North Area branch, on Jalan Moses Gatotkaca in Mrican. The Tirtodipuran
     // branch is the other one; coordinates and address both point here.
+    // Pin is the `!3d/!4d` marker; reverse-geocodes to "Nanamia Pizzeria".
     description:
       "Wood-fired, thin-crust Italian, and one of the places that started Jogja's proper-pizza habit. Antipasti, pasta and pizza. This is the North Area branch off Gejayan, tucked down a side street near Jogja Plaza; there is a second branch south on Tirtodipuran if this one is full.",
-    latitude: -7.7761738,
-    longitude: 110.3883598,
+    latitude: -7.7761791,
+    longitude: 110.3909347,
     address: "Jl. Moses Gatotkaca No.B 9 - 14, Mrican, Caturtunggal, Kec. Depok, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55281",
     visitDurationMinutes: 90,
     openingHours: "11:00 – 22:00",
@@ -49,11 +50,12 @@ export const DESTINATIONS: Destination[] = [
     name: "Mediterranea Restaurant by Kamil",
     category: "Mediterranean restaurant",
     // OpenStreetMap lists it at "24 A, Jalan Tirtodipuran", matching the
-    // published address; 6 m from the road.
+    // published address. Pin is the `!3d/!4d` marker; reverse-geocodes to
+    // "Mediterranea by Kamil" on Jalan Tirtodipuran.
     description:
       "French-Mediterranean cooking on Tirtodipuran, open since 2012. Meze, salads, pasta, fish and a well-known pizza; vegetarian, vegan and gluten-free options, and a bakery counter by the door. Worth booking if you are going at the weekend.",
     latitude: -7.818465,
-    longitude: 110.3619559,
+    longitude: 110.3645308,
     address: "Tirtodipuran St No.24A, Mantrijeron, Yogyakarta City, Special Region of Yogyakarta 55143",
     visitDurationMinutes: 90,
     openingHours: "08:00 – 23:00",
@@ -67,14 +69,15 @@ export const DESTINATIONS: Destination[] = [
     id: "giorno-pizzeria",
     name: "Giorno's Pizzeria",
     category: "Pizzeria",
-    // Not in OpenStreetMap, but the coordinate matches the published address
-    // (Ambarukmo 377A) and snaps 9 m to an unnamed lane, consistent with being
-    // down a gang opposite Ambarrukmo Plaza. openingHours omitted on purpose:
-    // sources disagree on whether it opens at 10:00 or 15:00.
+    // Not in OpenStreetMap. Pin is the `!3d/!4d` marker from the supplied
+    // place link, in Ambarukmo as the published address says; the nearest
+    // mapped object is a clinic on Adisucipto, which is what you get for a
+    // venue down an unmapped gang. openingHours omitted on purpose: sources
+    // disagree on whether it opens at 10:00 or 15:00.
     description:
       "Italian down a lane opposite Ambarrukmo Plaza, two floors with the upstairs the one to ask for. Pizza, antipasti and pasta, using Camilla la Mozzarella cheeses. Different sources give different opening times, so call first.",
-    latitude: -7.7836247,
-    longitude: 110.3987375,
+    latitude: -7.78363,
+    longitude: 110.4013124,
     address: "Ambarukmo 377A, Ambarukmo, Caturtunggal, Kec. Depok, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55281",
     visitDurationMinutes: 90,
     tags: ["Foodie", "Pizza", "Halal"],
@@ -86,13 +89,15 @@ export const DESTINATIONS: Destination[] = [
     name: "L'Union Pizza",
     category: "Pizza workshop",
     // Address and hours read directly off the venue's own signage. See
-    // public/venues/lunion-pizza/3.webp. Jalan Rogoyudan is not in
-    // OpenStreetMap, so the pin is the Sinduadi village point.
+    // public/venues/lunion-pizza/3.webp. Not in OpenStreetMap: the pin is the
+    // `!3d/!4d` marker, which reverse-geocodes onto Jalan Rogoyudan I, the
+    // street the address names. Street-level, not the door, so still
+    // approximate.
     locationPrecision: "approximate",
     description:
       "Make your own pizza. That's the whole point, printed right on their sign. You build it and bake it yourself, so this one is as much an activity as a meal. Friday opens later than the rest of the week.",
-    latitude: -7.7700141,
-    longitude: 110.3582908,
+    latitude: -7.7700194,
+    longitude: 110.3608657,
     address: "Jl. Rogoyudan 1, Rogoyudan, Sinduadi, Kec. Mlati, Kabupaten Sleman, Daerah Istimewa Yogyakarta 55284",
     visitDurationMinutes: 120,
     openingHours: "11:00 – 22:00 (Fri from 14:00)",
@@ -104,12 +109,13 @@ export const DESTINATIONS: Destination[] = [
     id: "vredeburg",
     name: "Museum Benteng Vredeburg",
     category: "Museum",
-    // OpenStreetMap tourism=museum on Jalan Margo Mulyo. Hours change and no
+    // OpenStreetMap tourism=museum on Jalan Margo Mulyo. Pin is the `!3d/!4d`
+    // marker; reverse-geocodes inside the fort itself. Hours change and no
     // source was to hand, so none is stated.
     description:
       "A Dutch fort at the bottom of Malioboro, now a museum of the independence struggle told through dioramas. The grounds are open and shaded, and it's about three hundred metres from Sonobudoyo, so the two go together on foot.",
-    latitude: -7.8002877,
-    longitude: 110.3635893,
+    latitude: -7.800293,
+    longitude: 110.3661642,
     address: "Jl. Margo Mulyo No.6, Ngupasan, Kec. Gondomanan, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55122",
     visitDurationMinutes: 75,
     tags: ["Heritage", "Museum", "Malioboro"],
@@ -121,12 +127,13 @@ export const DESTINATIONS: Destination[] = [
     name: "Museum Sonobudoyo",
     category: "Museum",
     // OpenStreetMap tourism=museum; Jalan Pangurakan matches the address on
-    // sonobudoyo.jogjaprov.go.id. The site publishes no hours and no wayang
+    // sonobudoyo.jogjaprov.go.id. Pin is the `!3d/!4d` marker; reverse-geocodes
+    // to "Museum Sonobudoyo Unit I". The site publishes no hours and no wayang
     // schedule, so neither is stated here.
     description:
       "The best Javanese collection in the city, just north of the Kraton: keris, masks, batik and a serious wayang holding. It's also known for evening wayang kulit in its own pavilion; the museum doesn't publish the schedule online, so ask before you build an evening around it.",
-    latitude: -7.8022517,
-    longitude: 110.3613692,
+    latitude: -7.802257,
+    longitude: 110.3639441,
     address: "Jl. Pangurakan No.6, Ngupasan, Kec. Gondomanan, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55122",
     visitDurationMinutes: 90,
     tags: ["Heritage", "Museum", "Wayang"],
@@ -137,11 +144,12 @@ export const DESTINATIONS: Destination[] = [
     id: "gembira-loka",
     name: "Gembira Loka Zoo",
     category: "Zoo",
-    // OpenStreetMap tourism=zoo, Jalan Kebun Raya No. 2. No hours source to hand.
+    // OpenStreetMap tourism=zoo, Jalan Kebun Raya No. 2. Pin is the `!3d/!4d`
+    // marker; reverse-geocodes onto Jalan Kebun Raya. No hours source to hand.
     description:
       "The city zoo east of the Kraton, built around a lake you can cross by boat. Big enough to fill an afternoon on foot, and the shaded paths make it bearable in the middle of the day.",
-    latitude: -7.8039517,
-    longitude: 110.3955387,
+    latitude: -7.803957,
+    longitude: 110.3981136,
     address: "Jl. Kebun Raya No.2, Rejowinangun, Kec. Kotagede, Kota Yogyakarta, Daerah Istimewa Yogyakarta 55171",
     visitDurationMinutes: 150,
     tags: ["Outdoorsy", "Walking", "Half day"],
@@ -162,6 +170,10 @@ export const DESTINATIONS: Destination[] = [
       "A half-day batik class: draw in wax with a canting, dye, then wait while it dries. Slow, fiddly, and you leave holding something you made. Still working out exactly which studio this is, so the pin is a guess.",
     // Pin corrected to Jalan Tirtodipuran to match the supplied address; the
     // previous value landed on Jalan Karawitan II in Kasihan, Bantul.
+    // Deliberately NOT the `!3d/!4d` marker in the URL below, unlike every
+    // other entry: that marker is Batik Winotosastro, 255 m away, and nobody
+    // has confirmed Winotosastro is the operator. Moving the pin there would
+    // claim we know which studio this is.
     latitude: -7.8185241,
     longitude: 110.3651688,
     address: "Daerah Istimewa, Tirtodipuran St No.54, Mantrijeron, Yogyakarta City, Special Region of Yogyakarta 55143",

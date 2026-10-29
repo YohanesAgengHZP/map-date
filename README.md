@@ -60,6 +60,20 @@ Nothing fabricates a number it does not have. A leg with no answer renders as
 "Travel time unavailable", and totals say so rather than quietly summing to a
 wrong figure.
 
+**Tidy up the order** asks OSRM's trip service for the shortest way round the
+same stops, which is one request and no travelling-salesman code here. The
+first stop stays first, because it is the only one the plan treats as special:
+`startTime` is when you arrive there. The end is left free, and that is worth
+having — on a deliberately scrambled five-stop plan, pinning both ends got 44
+minutes down to 34 and freeing the end got it to 29.
+
+This is the one place that does **not** degrade to an estimate. A guessed
+travel time is still roughly the right number; a guessed *order* rearranges
+someone's afternoon on no evidence, so a provider that will not answer gets
+said out loud instead. An answer that is not a clean permutation of the stops
+sent is refused for the same reason: losing a stop off a plan is worse than
+leaving the order alone.
+
 ## Adding places: live search
 
 The twenty venues in `destinations.ts` are a hand-written seed, not the whole
@@ -86,6 +100,17 @@ only what the tags already say. The duration is editable — see below, because
 every arrival time in a plan is built on it. Results are filtered before display — a city, a
 street, and street furniture like the four park benches named "Bangku Taman"
 are not places you spend an hour.
+
+Both endpoints are shared, free and rate-limited, so `places.ts` asks them as
+little as it can. Every request gets exactly one retry, and only when the
+failure looks transient — a 429 or a 5xx, never a 400, which asking again
+cannot fix. Answers are cached for the session: searches by query, so
+backspacing a letter and retyping it costs nothing, and lookups by individual
+id, so a plan that adds one stop to four known ones asks about the one. Ids
+Overpass does not know are cached too, as misses, because a share link naming
+a deleted place otherwise spent 10 to 20 seconds on it at every mount. Nothing
+is persisted: these answers go stale, and the places that became stops are
+already in `jalanjalan:places`.
 
 Swap in Google or Foursquare by replacing those two functions. Everything
 downstream consumes `Destination`.
@@ -138,7 +163,23 @@ Maps URL, and each was reverse-geocoded against OpenStreetMap to confirm the
 street before being written down. **Use that pair, not the `@` one.** The `@`
 value is the map viewport centre, which Google offsets from the pin: taking it
 puts Nanamia's marker on Jalan Affandi, about 285 m from Jalan Moses Gatotkaca
-where the restaurant actually is. Several of the original ten carry that error.
+where the restaurant actually is.
+
+Seven entries were written from the `@` pair and carried exactly that error
+until it was fixed: the same 0.0025749° of longitude in every case, which is
+what a constant pixel offset at a constant zoom looks like in degrees. Nanamia,
+Mediterranea, Giorno's, L'Union, Vredeburg, Sonobudoyo and Gembira Loka all sat
+284 m west of themselves, so every travel time to them was wrong by a few
+minutes and every pin was on the wrong side of a block. Reverse-geocoding the
+corrected pins lands on "Nanamia Pizzeria", "Mediterranea by Kamil", "Museum
+Sonobudoyo Unit I" and inside Vredeburg's own walls; the old ones landed on a
+lecture hall, a cake shop, an alley and an Indomaret.
+
+`itinerary.test.ts` now asserts every entry's coordinate against the `!3d`/`!4d`
+pair in its own `directionsUrl`, so this cannot come back quietly.
+`batik-workshop` is the one exemption and says why in a comment: the marker in
+its URL is Batik Winotosastro, and nobody has confirmed Winotosastro is the
+operator.
 
 Four of those restaurants deliberately have no `openingHours` (Hankki, Hou Kie,
 Ola Kisat, Tesalonika). Their hours are on Google and nowhere citable, and the
@@ -150,8 +191,10 @@ Verification status per field:
   against the routable road network. Six venues carry
   `locationPrecision: "approximate"`, which the detail panel displays: L'Union
   Pizza, the batik workshop, Mohan Burger and Jogja Art Activity are not in
-  OpenStreetMap, so their pins are village- or street-level; Kids Fun Parcs and
+  OpenStreetMap, so their pins are street-level; Kids Fun Parcs and
   Ibarbo Park are only pinned to the road their kilometre-marker address names.
+  L'Union's pin now reverse-geocodes onto Jalan Rogoyudan I, the street its
+  address names, and stays flagged approximate because a street is not a door.
 - **Opening hours:** only where a source publishes them. Giorno's, Sonobudoyo,
   Vredeburg, Gembira Loka and four of the new restaurants are deliberately
   blank. Two venues' hours were read off their own signage in a photo the owner
@@ -186,6 +229,36 @@ A shared link carries the sender's duration for the places it carries, so a
 plan that says five hours still says five hours when it arrives. An override on
 a *built-in* venue does not travel, because built-ins are resolved from the
 reader's own repo copy.
+
+## Whether anywhere is open when you get there
+
+`openingHours` used to be a string the detail panel printed and nothing read,
+so the scheduler would put you outside Sonobudoyo at 21:40 without comment.
+`lib/openingHours.ts` now checks it, and the stop card says **They're shut by
+then** or **They close before you'd leave**.
+
+The plan is a clock, not a calendar: `startTime` is "HH:MM" and there is no
+date anywhere in the app, so `Mo-Fr 08:00-17:00` cannot be evaluated as
+written — nobody has said which day they are going. Asking for a date to make
+one field work would be the worse trade.
+
+What is still answerable is the time of day, so the check takes the union of
+every window in the string and tests against that. Outside all of them means
+shut whichever day you turn up, and that holds however the day rules are
+written. Inside one means nothing is said, because "open on some days at this
+hour" is not worth interrupting anyone with. So a venue open `Mo-Fr 08:00-17:00`
+and `Sa 09:00-14:00` draws no warning at 08:30 and does draw one at 19:00.
+
+It is deliberately one-sided: it never claims anywhere is open, only that it is
+closed, and only when the string proves it. Hours it cannot read — `sunrise-sunset`,
+"By appointment", blank — are unknown, and unknown never reads as closed. Two
+fields in this app are already guesses with the word "guess" on them; a third
+that cried wolf would get the first two ignored too.
+
+Both shapes the field holds are read the same way: OSM `opening_hours` syntax
+from Overpass and the hand-written en-dashed strings in `destinations.ts`.
+`24/7` is special-cased because it carries no time range at all, and
+`22:00-02:00` runs past midnight rather than being discarded as backwards.
 
 ## Plans you make
 
@@ -280,8 +353,9 @@ src/
   lib/
     types.ts              Destination, Plan, TravelLeg, ItineraryStop
     itinerary.ts          Scheduling, totals, reordering
-    routing.ts            Routing provider boundary + fallbacks
-    places.ts             Place provider boundary (Photon + Overpass)
+    openingHours.ts       Is a stop scheduled for a time the venue is shut?
+    routing.ts            Routing provider boundary + fallbacks, order tidying
+    places.ts             Place provider boundary (Photon + Overpass), cache
     customPlaces.ts       Cache of places found through search
     localStore.ts         localStorage as an external store (React-free)
     useLocalStore.ts      The React binding for it
@@ -309,11 +383,15 @@ layer and focus containment without a focus-trap dependency.
 - Plans you make and the plans you hide live in `localStorage`, so they are per
   browser: no sync between devices, and clearing site data removes them.
 - Reordering uses explicit up/down controls rather than drag-and-drop, which is
-  keyboard accessible and needs no drag library.
+  keyboard accessible and needs no drag library. **Tidy up the order** does the
+  whole list at once, and needs the router: there is no offline version of it,
+  on purpose.
+- The opening-hours check reads the clock, not the calendar. A venue shut all
+  day Monday draws no warning for a Monday plan, because no plan knows what day
+  it is. It only flags times that are outside every window the venue publishes.
 - The route polyline follows real roads only while the router answers; the
   distance-based fallback draws a dashed straight line so it never implies a road
   that was not routed.
-- Opening hours are not checked against a stop's scheduled arrival time.
 - Non-walking legs show a bare duration (`10 min · 7.4 km`) rather than naming a
   mode. The number comes from OSRM's driving profile, which is close enough for
   a motorbike or a ride-hail and optimistic for a bicycle; the summary footer
@@ -331,11 +409,6 @@ layer and focus containment without a focus-trap dependency.
   them in, so a plan does not cross the city twice.
 - Jogja Art Activity has a second, newer branch in Mantrijeron. The pin is the
   Pangurakan one; no address for the other was findable.
-- Eight of the original ten pins were taken from the `@` viewport value in a
-  Google Maps URL rather than the `!3d`/`!4d` place marker, which puts every one
-  of them about 284 m west of the real venue. Not yet corrected. Reproduce with
-  a diff of each entry's `latitude`/`longitude` against the `!3d`/`!4d` pair in
-  its own `directionsUrl`.
 - `bookingRequired` is displayed as a chip but still does not affect scheduling.
 - Searched places carry no photo, no written description and often no address:
   only what OpenStreetMap tags happen to hold. The detail panel says "Not
@@ -346,12 +419,14 @@ layer and focus containment without a focus-trap dependency.
   plan: the same venue in two plans gets the same figure.
 - Search ranking is biased toward Jogja by a hardcoded `SEARCH_CENTER`, even
   though the dialog will happily find somewhere in another country.
-- Neither Photon nor Overpass is retried or backed off, and repeated searches
-  are not cached. Both public endpoints are rate-limited with no uptime
-  guarantee; point the env vars at your own instances for anything real.
+- Photon and Overpass get one retry and a per-session cache, which is not the
+  same as backing off: a sustained rate limit still fails. Both public
+  endpoints are rate-limited with no uptime guarantee; point the env vars at
+  your own instances for anything real. The cache is in memory, so a reload
+  asks again.
 - Overpass answers in 10–20 seconds under load, and returns `502` often enough
-  to have done so during testing. Links now carry their own place records, so
-  only ones shared before that change still wait on it.
+  to have done so during testing. Links carry their own place records, so only
+  ones shared before that change still wait on it.
 - Six venues sit in the pool without being in a plan, reachable by editing an
   itinerary: L'Union, Ryuji, the batik workshop, Jogja Art Activity, Kids Fun
   Parcs and Ibarbo Park.

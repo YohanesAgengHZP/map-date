@@ -45,7 +45,7 @@ export function Stat({
       {icon ? <span className="text-clay mt-0.5 shrink-0">{icon}</span> : null}
       <div className="min-w-0">
         {label ? (
-          <div className="text-ink-muted text-[11px] tracking-wide uppercase">
+          <div className="text-ink-muted text-[11px] tracking-wider uppercase">
             {label}
           </div>
         ) : null}

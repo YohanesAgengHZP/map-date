@@ -32,6 +32,93 @@ const OVERPASS_URL =
 const SEARCH_CENTER = { lat: -7.7956, lon: 110.3695 };
 
 /* ------------------------------------------------------------------ *
+ * Asking the network politely
+ *
+ * Both endpoints are shared, rate-limited and free, and Overpass answers in
+ * 10 to 20 seconds under load and returned 502 often enough to do so during
+ * testing. Two cheap habits make that survivable without a backend: ask once
+ * again when the failure looks transient, and never ask the same question
+ * twice in a session.
+ * ------------------------------------------------------------------ */
+
+const RETRY_DELAY_MS = 400;
+
+/** 429 and 5xx are worth asking again. A 404 or a 400 will not change. */
+function isTransient(status: number): boolean {
+  return status === 429 || status >= 500;
+}
+
+/**
+ * Resolves early on abort rather than rejecting: the retry that follows calls
+ * `fetch` with the same aborted signal, which rejects immediately by itself.
+ * One wasted timer beats an abort-listener dance.
+ */
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Exactly one retry. The person who typed is still waiting, and hammering a
+ * rate-limited endpoint is how you stay rate-limited.
+ */
+async function fetchRetrying(
+  url: string | URL,
+  init: RequestInit,
+  who: string,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const last = attempt > 0;
+
+    // The refusal is thrown outside the try on purpose: raised inside it, the
+    // catch below would treat "400, do not retry" as a transport failure and
+    // retry it anyway.
+    let response: Response | null = null;
+    try {
+      response = await fetch(url, init);
+    } catch (error) {
+      // An abort is the caller changing its mind, not a failure to retry.
+      if (last || init.signal?.aborted) throw error;
+    }
+
+    if (response) {
+      if (response.ok) return response;
+      if (last || !isTransient(response.status)) {
+        throw new Error(`${who} answered ${response.status}`);
+      }
+    }
+
+    await wait(RETRY_DELAY_MS);
+  }
+}
+
+/**
+ * Per session and in memory only. These answers go stale, and the places that
+ * actually became stops are already persisted by `customPlaces`.
+ *
+ * Bounded, because a long session of typing is a long session of distinct
+ * queries. `Map` iterates in insertion order, so the first key is the oldest.
+ */
+const MAX_CACHED = 50;
+
+function remember<T>(cache: Map<string, T>, key: string, value: T): T {
+  cache.set(key, value);
+  while (cache.size > MAX_CACHED) {
+    const oldest = cache.keys().next().value;
+    if (oldest === undefined) break;
+    cache.delete(oldest);
+  }
+  return value;
+}
+
+const searchCache = new Map<string, Destination[]>();
+/** `null` records "asked, and Overpass does not know it" so it is asked once. */
+const lookupCache = new Map<string, Destination | null>();
+
+/** Exported for tests; nothing in the app needs to forget an answer. */
+export function clearPlaceCaches(): void {
+  searchCache.clear();
+  lookupCache.clear();
+}
+
+/* ------------------------------------------------------------------ *
  * Ids
  *
  * `osm:N:123456` rather than a slug. Prefixed so a live place can never
@@ -254,6 +341,12 @@ export async function searchPlaces(
   const trimmed = query.trim();
   if (trimmed.length < 3) return [];
 
+  // Backspacing a letter and typing it again is the common case, and it used
+  // to cost a second request.
+  const key = trimmed.toLowerCase();
+  const hit = searchCache.get(key);
+  if (hit) return hit;
+
   const url = new URL(PHOTON_URL);
   url.searchParams.set("q", trimmed);
   url.searchParams.set("limit", "12");
@@ -261,8 +354,7 @@ export async function searchPlaces(
   url.searchParams.set("lat", String(SEARCH_CENTER.lat));
   url.searchParams.set("lon", String(SEARCH_CENTER.lon));
 
-  const response = await fetch(url, { signal });
-  if (!response.ok) throw new Error(`Photon answered ${response.status}`);
+  const response = await fetchRetrying(url, { signal }, "Photon");
 
   const body: unknown = await response.json();
   const features =
@@ -282,7 +374,7 @@ export async function searchPlaces(
   for (const place of places) {
     if (!byId.has(place.id)) byId.set(place.id, place);
   }
-  return [...byId.values()];
+  return remember(searchCache, key, [...byId.values()]);
 }
 
 /* ------------------------------------------------------------------ *
@@ -454,24 +546,45 @@ export async function lookupPlaces(
   ids: string[],
   signal?: AbortSignal,
 ): Promise<Destination[]> {
-  const query = buildOverpassQuery(ids);
-  if (!query) return [];
+  // Cached per id rather than per call, so a plan that adds one stop to four
+  // already-known ones asks about the one. Ids already known to be
+  // unresolvable are not asked about again: a share link naming a dead id
+  // otherwise spent 10 to 20 seconds on it on every mount.
+  const known = ids
+    .map((id) => lookupCache.get(id))
+    .filter((place): place is Destination => place != null);
+  const missing = ids.filter((id) => !lookupCache.has(id));
+  if (missing.length === 0) return known;
 
-  const response = await fetch(OVERPASS_URL, {
-    method: "POST",
-    body: new URLSearchParams({ data: query }),
-    signal,
-  });
-  if (!response.ok) throw new Error(`Overpass answered ${response.status}`);
+  const query = buildOverpassQuery(missing);
+  if (!query) return known;
+
+  const response = await fetchRetrying(
+    OVERPASS_URL,
+    {
+      method: "POST",
+      body: new URLSearchParams({ data: query }),
+      signal,
+    },
+    "Overpass",
+  );
 
   const body: unknown = await response.json();
   const elements =
     typeof body === "object" && body !== null && "elements" in body
       ? (body as { elements: unknown }).elements
       : null;
-  if (!Array.isArray(elements)) return [];
+  if (!Array.isArray(elements)) return known;
 
-  return elements
+  const found = elements
     .map((element) => fromOverpass(element as OverpassElement))
     .filter((place): place is Destination => place !== null);
+
+  // Record the misses too, which is the whole point of asking.
+  const byId = new Map(found.map((place) => [place.id, place]));
+  for (const id of missing) {
+    remember(lookupCache, id, byId.get(id) ?? null);
+  }
+
+  return [...known, ...found];
 }

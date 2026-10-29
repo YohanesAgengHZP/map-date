@@ -218,5 +218,9 @@ export function useMyPlans() {
     });
   }, []);
 
-  return { plans, hidden, add, remove, setStops, toggleHidden };
+  const unhideAll = useCallback(() => {
+    store.write({ ...store.read(), hidden: [] });
+  }, []);
+
+  return { plans, hidden, add, remove, setStops, toggleHidden, unhideAll };
 }

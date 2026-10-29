@@ -161,6 +161,8 @@ export function CategoryPattern({
         createElement(iconFor(source[index % source.length]), {
           key: index,
           size: 30,
+          // Lighter than the 1.5 every foreground glyph uses: this is
+          // wallpaper, and it sits behind the row drawn at full strength.
           strokeWidth: 1.25,
           // Nudged off the line it would otherwise sit on. A flat grid of
           // identical symbols looks like a spreadsheet; the zigzag reads as

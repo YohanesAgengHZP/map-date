@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { DESTINATIONS, getDestinations } from "@/data/destinations";
 import { PLANS } from "@/data/plans";
 import { formatClock, formatDuration } from "./format";
 import { buildItinerary, calculateTotals, moveItem } from "./itinerary";
-import { estimateRoute } from "./routing";
+import { estimateRoute, optimizeOrder } from "./routing";
 import type { Destination, TravelLeg } from "./types";
 
 const leg = (fromId: string, toId: string, minutes: number | null): TravelLeg => ({
@@ -159,6 +159,96 @@ describe("estimateRoute (offline fallback)", () => {
   });
 });
 
+describe("optimizeOrder", () => {
+  const FOUR = getDestinations([
+    "vredeburg",
+    "gembira-loka",
+    "sonobudoyo",
+    "nanamia-pizzeria",
+  ]);
+
+  const trip = (order: number[], code = "Ok") =>
+    new Response(
+      JSON.stringify({
+        code,
+        waypoints: order.map((waypoint_index) => ({ waypoint_index })),
+      }),
+      { status: 200 },
+    );
+
+  const stubFetch = (response: Response | Error) => {
+    const mock = vi.fn(() =>
+      response instanceof Error
+        ? Promise.reject(response)
+        : Promise.resolve(response),
+    );
+    vi.stubGlobal("fetch", mock);
+    return mock;
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("rebuilds the order the router suggests", () => {
+    // waypoint_index is where each stop we sent ended up, so stop 1 going to
+    // position 3 means the third stop in, not "swap with number three".
+    stubFetch(trip([0, 3, 1, 2]));
+    return expect(optimizeOrder(FOUR)).resolves.toEqual({
+      status: "reordered",
+      destinations: [FOUR[0], FOUR[2], FOUR[3], FOUR[1]],
+    });
+  });
+
+  it("keeps the first stop first, which is what the start time is for", async () => {
+    stubFetch(trip([0, 3, 1, 2]));
+    const result = await optimizeOrder(FOUR);
+    expect(result.status === "reordered" && result.destinations[0].id).toBe(
+      "vredeburg",
+    );
+  });
+
+  it("says so rather than committing an identical order", () => {
+    stubFetch(trip([0, 1, 2, 3]));
+    return expect(optimizeOrder(FOUR)).resolves.toEqual({
+      status: "already-shortest",
+    });
+  });
+
+  it("asks nobody when there is nothing to rearrange", async () => {
+    const fetchMock = stubFetch(trip([0, 1]));
+    expect(await optimizeOrder(FOUR.slice(0, 2))).toEqual({
+      status: "already-shortest",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses an answer that is not a clean permutation", async () => {
+    // Each of these would drop or duplicate a stop. Losing one off someone's
+    // plan is worse than leaving the order alone, so none of them are applied.
+    for (const broken of [[0, 1, 1, 2], [0, 1, 2, 9], [0, 1, 2]]) {
+      stubFetch(trip(broken));
+      expect(await optimizeOrder(FOUR)).toEqual({ status: "unavailable" });
+    }
+  });
+
+  it("reports a provider that will not answer, and invents no order", async () => {
+    stubFetch(trip([0, 1, 2, 3], "NoTrips"));
+    expect(await optimizeOrder(FOUR)).toEqual({ status: "unavailable" });
+
+    stubFetch(new Response("", { status: 503 }));
+    expect(await optimizeOrder(FOUR)).toEqual({ status: "unavailable" });
+
+    stubFetch(new TypeError("network down"));
+    expect(await optimizeOrder(FOUR)).toEqual({ status: "unavailable" });
+  });
+
+  it("lets an abort through instead of reporting it as a failure", async () => {
+    stubFetch(new DOMException("aborted", "AbortError"));
+    await expect(optimizeOrder(FOUR)).rejects.toThrow("aborted");
+  });
+});
+
 describe("real-asset data integrity", () => {
   it("resolves every id referenced by a plan", () => {
     for (const plan of PLANS) {
@@ -174,6 +264,29 @@ describe("real-asset data integrity", () => {
     for (const d of DESTINATIONS) {
       expect(d.visitDurationMinutes).toBeGreaterThan(0);
     }
+  });
+
+  it("pins every venue at the !3d/!4d marker in its own directions URL", () => {
+    // A Google Maps place URL carries two coordinate pairs. `@` is the
+    // viewport centre, which Google offsets from the pin; `!3d/!4d` is the pin
+    // itself. Eight entries were once written from the `@` pair and sat 284 m
+    // west of the venue, which quietly wronged every travel time to them.
+    //
+    // batik-workshop is the one exception and stays one: its URL points at
+    // Batik Winotosastro, and nobody has confirmed that is the operator.
+    const offenders = DESTINATIONS.flatMap((d) => {
+      if (d.id === "batik-workshop") return [];
+      const marker = /!3d(-?[\d.]+)!4d(-?[\d.]+)/.exec(d.directionsUrl);
+      if (!marker) return []; // No place marker in the URL; nothing to check.
+      const metres = Math.hypot(
+        (Number(marker[1]) - d.latitude) * 111_320,
+        (Number(marker[2]) - d.longitude) *
+          111_320 *
+          Math.cos((d.latitude * Math.PI) / 180),
+      );
+      return metres > 1 ? [`${d.id} is ${Math.round(metres)}m off`] : [];
+    });
+    expect(offenders).toEqual([]);
   });
 
   it("carries no photo fields or image assets anywhere in the data", () => {

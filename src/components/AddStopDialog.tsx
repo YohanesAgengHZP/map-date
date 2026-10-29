@@ -197,7 +197,10 @@ export function AddStopDialog({
                 setAdded(null);
               }}
               placeholder="Search any place, or pick one below"
-              className="min-w-0 flex-1 bg-transparent text-sm outline-none"
+              // `text-base` below `sm`: iOS Safari zooms the whole page when a
+              // focused input renders under 16px, and this one is the first
+              // thing tapped in the sheet.
+              className="min-w-0 flex-1 bg-transparent text-base outline-none sm:text-sm"
             />
             {searching ? (
               <Loader2
@@ -251,7 +254,7 @@ export function AddStopDialog({
             ))}
 
             {remote.length > 0 ? (
-              <li className="text-ink-muted px-2 pt-4 pb-1 text-[11px] font-semibold tracking-wide uppercase">
+              <li className="text-ink-muted px-2 pt-4 pb-1 text-[11px] font-semibold tracking-wider uppercase">
                 Found on the map
               </li>
             ) : null}

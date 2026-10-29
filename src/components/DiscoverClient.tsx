@@ -2,7 +2,15 @@
 
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, type ReactNode } from "react";
-import { Eye, EyeOff, Plus, Search, SlidersHorizontal, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  Plus,
+  SlidersHorizontal,
+  Trash2,
+} from "lucide-react";
 import { MOODS, TIME_FILTERS } from "@/data/plans";
 import { getDestinations } from "@/data/destinations";
 import { calculateTotals } from "@/lib/itinerary";
@@ -55,7 +63,7 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
   const [showHidden, setShowHidden] = useState(false);
   const resultsRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-  const { plans, hidden, add, remove, toggleHidden } = useMyPlans();
+  const { plans, hidden, add, remove, toggleHidden, unhideAll } = useMyPlans();
 
   /**
    * The built-in cards arrive pre-rendered from the server. The user's own are
@@ -106,6 +114,10 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
 
   const filtersActive = mood !== "any" || time !== "any";
 
+  // `hidden` holds persisted ids, which outlive the plans they name. A stale
+  // one offered "Show 1 hidden" beside "Showing 6 of 6" — a count of nothing.
+  const hiddenHere = entries.filter((entry) => hidden.includes(entry.id));
+
   const startPlan = (input: { title: string; mood: Mood; startTime: string }) => {
     const plan = createMyPlan(input);
     add(plan);
@@ -140,8 +152,8 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
               </h1>
               <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/80 sm:text-base">
                 A few afternoons around Jogja, already worked out. Where to
-                go, how long it takes, and how far apart everything is. Add
-                anywhere else you like by searching for it.
+                go, how long it takes, and how far apart everything is. Open
+                one and you can add anywhere else you like.
               </p>
             </div>
 
@@ -161,9 +173,12 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
                 onChange={(value) => setTime(value as TimeId)}
                 options={TIME_FILTERS.map((t) => ({ value: t.id, label: t.label }))}
               />
+              {/* "Show me" promised a search that had already happened: the
+                  filters apply as they change, so pressing it only moved the
+                  page. Named for what it does. */}
               <Button onClick={scrollToResults} className="shrink-0 sm:px-5">
-                <Search size={15} aria-hidden />
-                Show me
+                <ArrowDown size={15} aria-hidden />
+                See the plans
               </Button>
             </div>
           </div>
@@ -185,10 +200,11 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setMood(selected ? "any" : item.id)}
-                  className={cx(
-                    "group w-full text-left",
-                    "focus-visible:outline-clay",
-                  )}
+                  // No `focus-visible:outline-clay`: that utility emits no
+                  // `outline-color` in this build. The global rule rings it.
+                  // `rounded-xl` matches the tile inside, so the ring traces
+                  // the card rather than cutting its corners.
+                  className="group w-full rounded-xl text-left"
                 >
                   {/* These were photo tiles, then text only: a mood is not a
                       category, and no icon honestly stands for "Cozy" the way
@@ -282,7 +298,7 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
           <p aria-live="polite" className="text-ink-muted text-xs">
             Showing {visible.length} of {entries.length + mine.length}
           </p>
-          {hidden.length > 0 ? (
+          {hiddenHere.length > 0 ? (
             <button
               type="button"
               onClick={() => setShowHidden((value) => !value)}
@@ -291,15 +307,21 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
               {showHidden ? <EyeOff size={12} aria-hidden /> : <Eye size={12} aria-hidden />}
               {showHidden
                 ? "Stop showing hidden"
-                : `Show ${hidden.length} hidden`}
+                : `Show ${hiddenHere.length} hidden`}
             </button>
           ) : null}
         </div>
 
         {visible.length === 0 ? (
+          /* "Start over" used to clear only the two filters, so hiding every
+             plan left a button that did nothing and a message blaming a
+             combination the user had not picked. It now undoes whatever is
+             actually emptying the list, and says which that is. */
           <div className="border-line bg-paper mt-5 rounded-2xl border border-dashed p-10 text-center">
             <p className="text-ink-soft text-sm">
-              Hmm, nothing fits that combination.
+              {filtersActive
+                ? "Hmm, nothing fits that combination."
+                : "You have hidden every plan."}
             </p>
             <Button
               variant="secondary"
@@ -307,9 +329,10 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
               onClick={() => {
                 setMood("any");
                 setTime("any");
+                unhideAll();
               }}
             >
-              Start over
+              {filtersActive ? "Start over" : "Show them all again"}
             </Button>
           </div>
         ) : (
@@ -317,7 +340,7 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
             {visible.map((entry) => {
               const isHidden = hidden.includes(entry.id);
               return (
-                <li key={entry.id} className="relative">
+                <li key={entry.id} className="group/card relative">
                   <div className={cx(isHidden && "opacity-55")}>{entry.card}</div>
                   <CardAction
                     entry={entry}
@@ -347,7 +370,18 @@ export function DiscoverClient({ entries }: { entries: PlanEntry[] }) {
  *
  * Deleting a plan you made asks twice, because it cannot be undone. Hiding a
  * built-in does not, because unhiding is right there.
+ *
+ * Pointer devices only reveal it on hover or focus: it sat on every card at
+ * all times, so the first word a new visitor read on a grid of suggestions
+ * was "Delete". Where there is no hover it stays visible, as does the button
+ * on an already-hidden card, which is the only way back.
  */
+const ACTION_CLASS =
+  "absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium backdrop-blur transition";
+
+const ACTION_REVEAL =
+  "md:opacity-0 md:focus-visible:opacity-100 md:group-hover/card:opacity-100";
+
 function CardAction({
   entry,
   hidden,
@@ -374,10 +408,10 @@ function CardAction({
         }}
         onBlur={() => setConfirming(false)}
         className={cx(
-          "absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium backdrop-blur transition-colors",
+          ACTION_CLASS,
           confirming
             ? "bg-clay text-white"
-            : "text-ink bg-white/92 hover:bg-white",
+            : cx("text-ink bg-white/92 hover:bg-white", ACTION_REVEAL),
         )}
       >
         <Trash2 size={12} aria-hidden />
@@ -391,7 +425,11 @@ function CardAction({
       type="button"
       onClick={onToggleHidden}
       aria-label={hidden ? "Show this plan again" : "Hide this plan"}
-      className="text-ink absolute top-3 right-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/92 px-2.5 py-1.5 text-[11px] font-medium backdrop-blur transition-colors hover:bg-white"
+      className={cx(
+        ACTION_CLASS,
+        "text-ink bg-white/92 hover:bg-white",
+        !hidden && ACTION_REVEAL,
+      )}
     >
       {hidden ? <Eye size={12} aria-hidden /> : <EyeOff size={12} aria-hidden />}
       {hidden ? "Unhide" : "Hide"}
@@ -411,17 +449,25 @@ function FilterSelect({
   options: { value: string; label: string }[];
 }) {
   return (
-    <label className="border-field min-w-0 flex-1 rounded-xl border px-3 py-1.5 sm:border-0">
-      <span className="text-ink-muted block text-[11px] tracking-wide uppercase">
+    // The border used to drop at `sm`, which left the two filters reading as
+    // plain text on desktop — the first interaction on the page, with nothing
+    // to say it could be interacted with. Border and chevron at every width.
+    //
+    // The ring is drawn here, not on the `<select>`: the rounding lives on this
+    // label, so a ring around the bare select traced a hard-cornered box inside
+    // a rounded pill. Same fix as the search field in `AddStopDialog`.
+    //
+    // The border is left alone while focused. Recolouring it too put two clay
+    // outlines two pixels apart, which reads as one cramped double border
+    // rather than a ring; the border's job is to mark the control at rest.
+    <label className="border-field focus-within:outline-[var(--color-clay)] relative min-w-0 flex-1 rounded-xl border px-3 py-1.5 focus-within:outline-2 focus-within:outline-offset-2">
+      <span className="text-ink-muted block text-[11px] tracking-wider uppercase">
         {label}
       </span>
-      {/* No `focus:outline-none`. Here it removed the focus ring and put
-          nothing in its place, so tabbing to the mood or time filter left no
-          visible indication of where focus was at all. */}
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="text-ink w-full cursor-pointer appearance-none bg-transparent pr-4 text-sm"
+        className="text-ink w-full cursor-pointer appearance-none bg-transparent pr-6 text-sm outline-none"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -429,6 +475,11 @@ function FilterSelect({
           </option>
         ))}
       </select>
+      <ChevronDown
+        size={16}
+        aria-hidden
+        className="text-ink-muted pointer-events-none absolute right-3 bottom-2"
+      />
     </label>
   );
 }
