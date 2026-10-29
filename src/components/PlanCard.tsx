@@ -5,8 +5,8 @@ import { calculateTotals } from "@/lib/itinerary";
 import { estimateRoute } from "@/lib/routing";
 import { formatDurationBand } from "@/lib/format";
 import type { Plan } from "@/lib/types";
-import { CategoryPattern, iconFor } from "./CategoryIcon";
-import { Chip } from "./ui";
+import { CategoryPattern, iconFor, tintFor } from "./CategoryIcon";
+import { Chip, cx } from "./ui";
 
 /**
  * Card durations use the offline distance estimate rather than a live route:
@@ -29,7 +29,7 @@ export function PlanCard({
   return (
     <Link
       href={href ?? `/plan/${plan.id}`}
-      className="group border-line bg-paper focus-visible:outline-clay block overflow-hidden rounded-2xl border transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(46,38,34,0.25)]"
+      className="group border-line bg-paper block overflow-hidden rounded-2xl border transition-shadow hover:shadow-[0_8px_30px_-12px_rgba(46,38,34,0.25)]"
     >
       {/* Where the cover photo used to be. A row of the plan's own category
           icons, derived from the stops: it changes as the plan does, and it
@@ -40,12 +40,21 @@ export function PlanCard({
           The same icons tile faintly behind it, because five of them centred
           in a 5:2 box left most of the box empty — worst on a plan with no
           stops yet, which was a single pin in a pink field. The row stays at
-          full strength so it is still the thing being read. */}
-      <div className="bg-clay-soft/50 border-line relative flex aspect-[5/2] items-center justify-center gap-4 overflow-hidden border-b">
+          full strength so it is still the thing being read.
+
+          Tinted by the first stop rather than left flat clay: six cards of the
+          same pink wallpaper read as six copies of one card, and a grid is
+          scanned by colour before it is read. */}
+      <div
+        className={cx(
+          "border-line relative flex aspect-[5/2] items-center justify-center gap-4 overflow-hidden border-b",
+          tintFor(destinations[0]?.category ?? ""),
+        )}
+      >
         <CategoryPattern
           categories={destinations.map((d) => d.category)}
           tiles={24}
-          className="text-clay/15"
+          className="opacity-15"
         />
 
         {destinations.slice(0, 5).map((destination, index) => {
@@ -54,28 +63,32 @@ export function PlanCard({
             <Icon
               key={`${destination.id}-${index}`}
               size={28}
-              strokeWidth={1.25}
+              // 1.5, as `CategoryIcon` draws the same glyph everywhere else.
+              // The wallpaper behind it stays lighter on purpose.
+              strokeWidth={1.5}
               aria-hidden
               // `relative`, or the absolutely positioned pattern paints over it.
-              className="text-clay relative transition-transform duration-500 group-hover:-translate-y-0.5"
+              // 150ms, not 500: hovering cards is the main way this grid is
+              // read, and half a second to settle reads as lag.
+              className="relative transition-transform duration-150 ease-out group-hover:-translate-y-0.5"
             />
           );
         })}
         {destinations.length === 0 ? (
           <MapPin
             size={26}
-            strokeWidth={1.25}
+            strokeWidth={1.5}
             aria-hidden
-            className="text-clay/40 relative"
+            className="relative opacity-40"
           />
         ) : null}
 
         <div className="absolute inset-x-0 bottom-0 flex gap-2 p-3">
-          <span className="text-ink border-line inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1 text-[11px] font-medium">
+          <span className="text-ink border-line inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1 text-[11px] font-medium tabular-nums">
             <MapPin size={12} aria-hidden />
             {destinations.length} stops
           </span>
-          <span className="text-ink border-line inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1 text-[11px] font-medium">
+          <span className="text-ink border-line inline-flex items-center gap-1 rounded-full border bg-white/90 px-2.5 py-1 text-[11px] font-medium tabular-nums">
             <Clock size={12} aria-hidden />
             {totals.totalMinutes === null
               ? "Length unknown"

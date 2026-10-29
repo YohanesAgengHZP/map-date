@@ -1,7 +1,15 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Footprints, Navigation, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ClockAlert,
+  Footprints,
+  Navigation,
+  Trash2,
+} from "lucide-react";
 import { formatClock, formatDistance, formatDuration } from "@/lib/format";
+import { checkOpeningHours } from "@/lib/openingHours";
 import type { ItineraryStop as Stop } from "@/lib/types";
 import { CategoryIcon } from "./CategoryIcon";
 import { cx } from "./ui";
@@ -28,6 +36,14 @@ export function ItineraryStop({
   canRemove: boolean;
 }) {
   const { destination, order, arrivalMinutes, departureMinutes, travelToNext } = stop;
+
+  // Only ever says "shut", never "open", and only when the published hours
+  // prove it whichever day you go. See `lib/openingHours.ts`.
+  const hoursWarning = checkOpeningHours(
+    destination,
+    arrivalMinutes,
+    departureMinutes,
+  );
 
   return (
     <li>
@@ -69,13 +85,24 @@ export function ItineraryStop({
             <span className="text-ink-muted block truncate text-xs">
               {destination.category}
             </span>
-            <span className="text-ink-soft mt-1 block text-xs">
+            <span className="text-ink-soft mt-1 block text-xs tabular-nums">
               {formatClock(arrivalMinutes)} – {formatClock(departureMinutes)}
               <span className="text-ink-muted">
                 {" "}
                 ({formatDuration(destination.visitDurationMinutes)})
               </span>
             </span>
+
+            {hoursWarning ? (
+              <span className="text-clay mt-1.5 flex items-start gap-1.5 text-xs font-medium">
+                <ClockAlert size={13} aria-hidden className="mt-px shrink-0" />
+                <span>
+                  {hoursWarning === "closed-on-arrival"
+                    ? "They're shut by then"
+                    : "They close before you'd leave"}
+                </span>
+              </span>
+            ) : null}
           </span>
         </button>
 
@@ -114,7 +141,7 @@ export function ItineraryStop({
       </div>
 
       {travelToNext ? (
-        <p className="text-ink-muted flex items-center gap-1.5 py-2 pl-5 text-xs">
+        <p className="text-ink-muted flex items-center gap-1.5 py-2 pl-5 text-xs tabular-nums">
           {travelToNext.mode === "walking" ? (
             <Footprints size={12} aria-hidden />
           ) : (

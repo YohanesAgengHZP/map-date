@@ -65,7 +65,7 @@ export function CreatePlanDialog({
 
         <div className="space-y-4 p-4">
           <label className="block">
-            <span className="text-ink-muted block text-[11px] tracking-wide uppercase">
+            <span className="text-ink-muted block text-[11px] tracking-wider uppercase">
               Call it
             </span>
             <input
@@ -79,12 +79,14 @@ export function CreatePlanDialog({
                  `globals.css` already gives every `:focus-visible`, and it
                  fired on mouse clicks too because it was `focus:` rather than
                  `focus-visible:`. Letting the global ring do its job. */
-              className="border-field focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              /* `text-base` below `sm`: iOS Safari zooms the page when a
+                 focused input renders under 16px. */
+              className="border-field focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-base sm:text-sm"
             />
           </label>
 
           <label className="block">
-            <span className="text-ink-muted block text-[11px] tracking-wide uppercase">
+            <span className="text-ink-muted block text-[11px] tracking-wider uppercase">
               Setting off around
             </span>
             {/* Native time input: a picker library for this would be silly. */}
@@ -93,14 +95,20 @@ export function CreatePlanDialog({
               value={startTime}
               onChange={(event) => setStartTime(event.target.value)}
               required
-              className="border-field focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-sm"
+              className="border-field focus:border-clay mt-1 w-full rounded-xl border px-3 py-2 text-base tabular-nums sm:text-sm"
             />
           </label>
 
           <fieldset>
-            <legend className="text-ink-muted block text-[11px] tracking-wide uppercase">
+            <legend className="text-ink-muted block text-[11px] tracking-wider uppercase">
               Mood
             </legend>
+            {/* One arrives already picked, which read as a decision the app
+                had made about your afternoon. It only files the plan under a
+                filter, so the line says so and the choice stops mattering. */}
+            <p className="text-ink-muted mt-1 text-xs">
+              Only decides which mood filter your plan turns up under.
+            </p>
             <div className="mt-2 flex flex-wrap gap-2">
               {MOODS.map((item) => (
                 <button

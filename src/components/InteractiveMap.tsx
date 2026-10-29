@@ -377,9 +377,14 @@ export default function InteractiveMap({
         aria-label="Map of the plan"
       />
 
+      {/* On its own pill, not laid straight over the canvas: as bare text on a
+          half-transparent wash it collided with the street names underneath
+          and read as part of the map. Same treatment as the route overview. */}
       {destinations.length === 0 ? (
-        <div className="bg-clay-soft/50 text-ink-muted absolute inset-0 flex items-center justify-center p-6 text-center text-sm">
-          Add a stop and it will show up here.
+        <div className="bg-clay-soft/50 absolute inset-0 flex items-center justify-center p-6">
+          <p className="border-line bg-paper/95 text-ink-soft rounded-full border px-4 py-2 text-center text-sm backdrop-blur">
+            Add a stop and it will show up here.
+          </p>
         </div>
       ) : null}
 
