@@ -28,7 +28,7 @@ export default async function PlanPage({ params }: PageProps<"/plan/[id]">) {
   return (
     <>
       <SiteHeader />
-      <main className="flex-1 pb-16">
+      <main id="main" tabIndex={-1} className="flex-1 pb-16">
         <BuiltInPlan plan={plan} />
       </main>
     </>

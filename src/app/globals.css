@@ -73,6 +73,15 @@
     border-radius: 6px;
   }
 
+  /* Clay measures 1.98:1 against the plan header's brown, well under the 3:1
+     WCAG 2.4.11 asks of a focus indicator, so a keyboard user loses the ring on
+     exactly the row that holds Share and Delete. Controls on that band take a
+     white one instead: 12.6:1 on the same brown. Scoped to the band rather than
+     to each control, so a button added there later is covered too. */
+  .on-dark :focus-visible {
+    outline-color: #ffffff;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

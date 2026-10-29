@@ -21,6 +21,7 @@ import {
   formatDistance,
   formatDuration,
   formatDurationBand,
+  summarizeCategories,
 } from "@/lib/format";
 import { buildItinerary, calculateTotals, moveItem } from "@/lib/itinerary";
 import { lookupPlaces } from "@/lib/places";
@@ -336,7 +337,10 @@ export function PlanClient({
           className="text-white/[0.07]"
         />
 
-        <div className="relative mx-auto flex min-h-44 max-w-6xl flex-col px-4 py-4 sm:min-h-52 sm:px-6">
+        {/* `on-dark` whitens the focus ring for everything in the band; see
+            `globals.css`. Clay on this brown is below the contrast a focus
+            indicator needs. */}
+        <div className="on-dark relative mx-auto flex min-h-44 max-w-6xl flex-col px-4 py-4 sm:min-h-52 sm:px-6">
           <Link
             href="/"
             className="inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition-colors hover:bg-white/25"
@@ -352,7 +356,8 @@ export function PlanClient({
             <div className="min-w-0">
               <h1 className="text-3xl text-white sm:text-4xl">{plan.title}</h1>
               <p className="mt-1 text-sm text-white/80">
-                {destinations.map((d) => d.category).join(" → ") || "No stops yet"}
+                {summarizeCategories(destinations.map((d) => d.category)) ||
+                  "No stops yet"}
               </p>
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {plan.tags.map((tag) => (
@@ -428,18 +433,25 @@ export function PlanClient({
           aria-label="Plan view"
           className="border-line bg-paper grid grid-cols-2 gap-1 rounded-full border p-1"
         >
-          {(["itinerary", "map"] as const).map((view) => (
+          {/* Labelled "The plan", not "Itinerary": the panel it reveals is
+              headed "The plan", and two names for one thing is one too many. */}
+          {(
+            [
+              ["itinerary", "The plan"],
+              ["map", "Map"],
+            ] as const
+          ).map(([view, label]) => (
             <button
               key={view}
               type="button"
               aria-pressed={mobileView === view}
               onClick={() => setMobileView(view)}
               className={cx(
-                "rounded-full py-2 text-sm font-medium capitalize transition-colors",
+                "rounded-full py-2 text-sm font-medium transition-colors",
                 mobileView === view ? "bg-clay text-white" : "text-ink-soft",
               )}
             >
-              {view}
+              {label}
             </button>
           ))}
         </div>

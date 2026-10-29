@@ -25,7 +25,7 @@ export default function DiscoverPage() {
   return (
     <>
       <SiteHeader />
-      <main className="flex-1">
+      <main id="main" tabIndex={-1} className="flex-1">
         <DiscoverClient entries={entries} />
         <div className="mx-auto max-w-6xl px-4 pb-10 sm:px-6">
           <SampleNote />
